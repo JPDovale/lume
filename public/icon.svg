@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <title>Lume</title>
+  <desc>Um L em verde-lima que cresce em direção a uma centelha de luz, sobre um quadrado grafite.</desc>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#17191C"/>
+  <rect x="17" y="17" width="478" height="478" rx="111" stroke="#303539" stroke-width="2"/>
+  <path d="M144 140h64v204h160v64H176c-18 0-32-14-32-32V140Z" fill="#B5E878"/>
+  <path d="m244 280 42-60 39 28 57-80" stroke="#B5E878" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m368 100 10 27 27 10-27 10-10 27-10-27-27-10 27-10 10-27Z" fill="#F0F5E9"/>
+</svg>

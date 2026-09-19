@@ -1,0 +1,456 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Geist Variable", sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+.dark {
+  --background: #111113;
+  --foreground: #eeeef0;
+  --card: #19191c;
+  --card-foreground: #eeeef0;
+  --popover: #222225;
+  --popover-foreground: #eeeef0;
+  --primary: #c8e991;
+  --primary-foreground: #202b11;
+  --secondary: #26262a;
+  --secondary-foreground: #d8d8dc;
+  --muted: #26262a;
+  --muted-foreground: #9999a2;
+  --accent: #303035;
+  --accent-foreground: #eeeeef;
+  --destructive: #f5918b;
+  --border: #2d2d33;
+  --input: #3b3b43;
+  --ring: #c8e991;
+  --radius: 0.75rem;
+}
+@theme inline {
+  --font-sans: "Geist Variable", sans-serif;
+  --font-mono: "Geist Mono Variable", monospace;
+}
+body {
+  margin: 0;
+  font-family: "Geist Variable", sans-serif;
+}
+button {
+  cursor: pointer;
+}
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 34px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: #151517;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -1.5px;
+  padding: 0 12px;
+  margin-bottom: 52px;
+}
+.brand-icon {
+  color: var(--primary);
+}
+.sidebar-label {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  margin: 0 12px 18px;
+}
+.nav-item {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 12px;
+  height: 44px;
+  padding: 0 12px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.nav-item.active {
+  background: #27272b;
+  color: var(--primary);
+}
+.sidebar-bottom {
+  margin-top: auto;
+  padding-top: 36px;
+}
+.import-box {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 17px;
+}
+.import-box h3 {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.import-box p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+  margin-top: 8px;
+}
+.main-content {
+  width: 100%;
+  padding: 42px 40px 26px;
+}
+.forecast-card {
+  background: var(--card);
+  border-color: var(--border);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.field > div {
+  width: 100%;
+}
+.field select {
+  width: 100%;
+}
+.legend {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 7px;
+}
+.legend.income {
+  background: #c8e991;
+}
+.legend.expense {
+  background: #a4a0ec;
+}
+th {
+  height: 48px;
+  background: #1d1d21;
+}
+td {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+@media (max-width: 1100px) {
+  .app-shell {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .sidebar {
+    padding: 28px 12px;
+  }
+  .main-content {
+    padding: 32px 24px;
+  }
+  .brand {
+    margin-bottom: 36px;
+  }
+}
+
+@theme inline {
+  --color-warning: #e2ad73;
+}
+[data-slot="card"] {
+  min-width: 0;
+  padding-block: 0;
+}
+.metric-accent {
+  border-top: 2px solid var(--primary);
+}
+.metric-value {
+  font-size: clamp(1.15rem, 2vw, 1.8rem);
+  overflow-wrap: normal;
+}
+.chart-height {
+  height: 280px;
+  min-width: 0;
+}
+.wealth-chart-height {
+  height: 350px;
+  min-width: 0;
+}
+.method-note {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.method-note summary {
+  cursor: pointer;
+  color: var(--foreground);
+  font-weight: 500;
+}
+.category-legend-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: left;
+}
+.category-legend-row:hover {
+  background: var(--accent);
+}
+.mobile-topbar {
+  display: none;
+}
+.sidebar {
+  overflow-y: auto;
+}
+.main-content {
+  min-width: 0;
+}
+.mobile-navigation {
+  width: calc(100% - 32px);
+  max-width: 380px;
+}
+@media (max-width: 900px) {
+  .app-shell {
+    display: block;
+  }
+  .sidebar {
+    display: none;
+  }
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 22px;
+  }
+  .main-content {
+    padding: 20px;
+  }
+  .chart-height {
+    height: 260px;
+  }
+  .wealth-chart-height {
+    height: 300px;
+  }
+}
+@media (max-width: 540px) {
+  .main-content {
+    padding: 14px;
+  }
+  .page-header {
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .page-header h1 {
+    font-size: 26px;
+  }
+  .page-header .header-actions {
+    width: 100%;
+    margin-top: 0;
+  }
+  .header-actions > button:last-child {
+    flex: 1;
+  }
+  .chart-height,
+  .wealth-chart-height {
+    height: 240px;
+  }
+  .metric-value {
+    font-size: clamp(0.82rem, 3.8vw, 1.05rem);
+  }
+  .main-content footer {
+    gap: 16px;
+    line-height: 1.7;
+  }
+  [data-slot="dialog-content"] {
+    max-width: calc(100% - 24px);
+  }
+}
+
+/* Keep scrollbars visible and consistent across the window, tables and dialogs. */
+:root {
+  color-scheme: dark;
+  --scrollbar-track: #151517;
+  --scrollbar-thumb: #44444d;
+  --scrollbar-hover: #696973;
+}
+html {
+  scrollbar-gutter: stable;
+}
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 2px solid var(--scrollbar-track);
+    border-radius: 10px;
+    min-height: 36px;
+    min-width: 36px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-hover);
+  }
+  ::-webkit-scrollbar-thumb:active {
+    background: #8b8b96;
+  }
+  ::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+}
+@media (forced-colors: active) {
+  :root {
+    --scrollbar-track: Canvas;
+    --scrollbar-thumb: ButtonText;
+    --scrollbar-hover: Highlight;
+  }
+  * {
+    scrollbar-color: auto;
+  }
+}

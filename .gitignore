@@ -1,0 +1,15 @@
+node_modules/
+dist/
+dist-electron/
+release/
+*.local
+*.sqlite
+*.sqlite.bak
+*.sqlite.tmp
+
+.env
+.env.*
+*.log
+build/icon.png
+build/icon.ico
+public/icon.png

@@ -8,6 +8,11 @@ export interface LumeApi {
     kind: "accounts" | "categories" | "tags",
     entity: Named,
   ): Promise<Ledger>;
+  deleteNamed(
+    kind: "categories" | "tags",
+    id: string,
+    replacementId: string | null,
+  ): Promise<Ledger>;
   previewImport(): Promise<ImportPreview | null>;
   confirmImport(): Promise<Ledger>;
   exportBackup(): Promise<boolean>;

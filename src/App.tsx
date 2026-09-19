@@ -48,6 +48,7 @@ export default function App() {
     [selectedRecurrence, setSelectedRecurrence] = useState<string | null>(null),
     [menuOpen, setMenuOpen] = useState(false),
     [modal, setModal] = useState<"transaction" | "recurrence" | null>(null),
+    [editingRule, setEditingRule] = useState<Recurrence | undefined>(),
     [editing, setEditing] = useState<Transaction | undefined>(),
     [error, setError] = useState(
       window.lume ? "" : "Abra o Lume pelo Electron: npm run dev ou npm start.",
@@ -88,6 +89,7 @@ export default function App() {
   }
   function add(recurring = false) {
     setEditing(undefined);
+    setEditingRule(undefined);
     setModal(recurring ? "recurrence" : "transaction");
   }
   if (!ledger)
@@ -281,6 +283,11 @@ export default function App() {
             busy={busy}
             selectedId={selectedRecurrence}
             onCreate={() => add(true)}
+            onEdit={(rule) => {
+              setEditing(undefined);
+              setEditingRule(rule);
+              setModal("recurrence");
+            }}
             onToggle={(r) =>
               void run(async () =>
                 setLedger(
@@ -346,7 +353,9 @@ export default function App() {
           <DialogHeader>
             <DialogTitle>
               {modal === "recurrence"
-                ? "Nova recorrência"
+                ? editingRule
+                  ? "Editar recorrência"
+                  : "Nova recorrência"
                 : editing
                   ? "Editar lançamento"
                   : "Novo lançamento"}
@@ -359,10 +368,11 @@ export default function App() {
           </DialogHeader>
           {modal && (
             <TransactionForm
-              key={editing?.id ?? modal}
+              key={editing?.id ?? editingRule?.id ?? modal}
               ledger={ledger}
               recurring={modal === "recurrence"}
               initial={editing}
+              initialRule={modal === "recurrence" ? editingRule : undefined}
               onSave={async (value) => {
                 setLedger(
                   modal === "recurrence"

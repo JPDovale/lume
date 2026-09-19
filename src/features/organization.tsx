@@ -1,3 +1,5 @@
+import { Pencil, Trash2 } from "lucide-react";
+import { NamedEntityDialog, type NamedSelection } from "./named-entity-dialog";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +13,7 @@ export function Organization({
   ledger: Ledger;
   onChange: (s: Ledger) => void;
 }) {
+  const [selection, setSelection] = useState<NamedSelection | null>(null);
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   async function create(
@@ -33,6 +36,15 @@ export function Organization({
   }
   return (
     <div className="space-y-5">
+      {selection && (
+        <NamedEntityDialog
+          key={`${selection.action}:${selection.entity.id}`}
+          selection={selection}
+          ledger={ledger}
+          onChange={onChange}
+          onClose={() => setSelection(null)}
+        />
+      )}
       {error && (
         <p role="alert" className="text-destructive">
           {error}
@@ -90,9 +102,38 @@ export function Organization({
                     className="flex items-center justify-between gap-2 text-sm border-b border-border pb-3"
                   >
                     {kind === "tags" ? (
-                      <Badge variant="secondary">#{v.name}</Badge>
+                      <Badge
+                        variant="secondary"
+                        className="min-w-0 whitespace-normal break-words"
+                      >
+                        #{v.name}
+                      </Badge>
                     ) : (
-                      <span>{v.name}</span>
+                      <span className="min-w-0 break-words">{v.name}</span>
+                    )}
+                    {kind !== "accounts" && (
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Editar ${kind === "categories" ? "categoria" : "tag"} ${v.name}`}
+                          onClick={() =>
+                            setSelection({ kind, entity: v, action: "edit" })
+                          }
+                        >
+                          <Pencil size={15} />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Excluir ${kind === "categories" ? "categoria" : "tag"} ${v.name}`}
+                          onClick={() =>
+                            setSelection({ kind, entity: v, action: "delete" })
+                          }
+                        >
+                          <Trash2 size={15} />
+                        </Button>
+                      </div>
                     )}
                     {kind === "accounts" && (
                       <span className="text-muted-foreground tabular-nums">

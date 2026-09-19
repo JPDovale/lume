@@ -22,6 +22,7 @@ export function Recurrences({
   selectedId,
   onCreate,
   onToggle,
+  onEdit,
   onTransactions,
 }: {
   ledger: Ledger;
@@ -29,6 +30,7 @@ export function Recurrences({
   selectedId: string | null;
   onCreate: () => void;
   onToggle: (rule: Recurrence) => void;
+  onEdit: (rule: Recurrence) => void;
   onTransactions: (id: string) => void;
 }) {
   return (
@@ -128,6 +130,14 @@ export function Recurrences({
                           onClick={() => onTransactions(rule.id)}
                         >
                           Ver lançamentos
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(rule)}
+                          aria-label={`Editar recorrência ${rule.description}`}
+                        >
+                          Editar
                         </Button>
                         <Button
                           disabled={busy}

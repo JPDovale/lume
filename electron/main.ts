@@ -52,6 +52,9 @@ else
       handle("ledger:transaction", (tx) => service.saveTransaction(tx));
       handle("ledger:recurrence", (r) => service.saveRecurrence(r));
       handle("ledger:named", (kind, entity) => service.saveNamed(kind, entity));
+      handle("ledger:delete-named", (kind, id, replacementId) =>
+        service.deleteNamed(kind, id, replacementId),
+      );
       handle("ledger:import-preview", async () => {
         pending = null;
         const { canceled, filePaths } = await dialog.showOpenDialog(win, {

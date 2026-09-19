@@ -135,12 +135,12 @@ O vetor original está em [`public/icon.svg`](public/icon.svg). `npm run icons` 
 
 ```sh
 npm run package:linux  # release/Lume-linux-x86_64.AppImage
-npm run package:win    # release/Lume-Setup-0.3.0-x64.exe (executar no Windows)
+npm run package:win    # release/Lume-Setup-0.3.1-x64.exe (executar no Windows)
 ```
 
 O GitHub Actions testa e empacota em runners nativos Linux e Windows a cada push em `main`, pull request e execução manual. Tags `v*` publicam os dois arquivos e `SHA256SUMS.txt` em Releases. Os pacotes são x64; o instalador Windows ainda não possui assinatura de código. Não há atualização automática dentro do Lume.
 
-Para publicar uma versão, atualize `package.json` e `package-lock.json`, faça commit e envie a tag correspondente (por exemplo, `v0.3.1`).
+Para publicar uma versão, atualize `package.json` e `package-lock.json`, faça commit e envie a tag correspondente (por exemplo, `v0.3.2`).
 
 ### Linux com Gear Lever
 
@@ -171,3 +171,14 @@ Validação do fluxo completo em Electron real, com perfil temporário separado:
 npm run build
 node scripts/recurrence-smoke.mjs
 ```
+
+
+## Editar recorrências e organizar categorias/tags
+
+Em **Recorrências → Editar**, ajuste descrição, valor, precisão, conta, categoria, tags, observações e término. As alterações afetam novas ocorrências; valores e validações existentes são preservados. Início e frequência podem ser alterados enquanto não houver lançamentos; após a primeira ocorrência, esses campos ficam fixos para preservar a numeração.
+
+Em **Organização**, os botões de lápis renomeiam categorias e tags sem alterar seus vínculos. O botão de lixeira abre um modal com a quantidade de lançamentos e recorrências afetados e um seletor de destino. **Mover e excluir** transfere todos os vínculos antes de remover a origem, numa única gravação. Tags de destino já presentes não são duplicadas.
+
+A seleção de outro destino é obrigatória quando há vínculos, inclusive em recorrências ainda sem lançamentos. Caso não exista outro item, cadastre-o antes. Apenas itens sem vínculos podem ser excluídos sem destino. Cancelar não altera dados.
+
+`node scripts/management-smoke.mjs` valida edição, renomeação, cancelamento, migração obrigatória, deduplicação de tags, interface a 360 px e persistência ao reabrir.

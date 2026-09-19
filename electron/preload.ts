@@ -5,6 +5,8 @@ const api: LumeApi = {
   saveTransaction: (t) => ipcRenderer.invoke("ledger:transaction", t),
   saveRecurrence: (r) => ipcRenderer.invoke("ledger:recurrence", r),
   saveNamed: (k, e) => ipcRenderer.invoke("ledger:named", k, e),
+  deleteNamed: (kind, id, replacementId) =>
+    ipcRenderer.invoke("ledger:delete-named", kind, id, replacementId),
   previewImport: () => ipcRenderer.invoke("ledger:import-preview"),
   confirmImport: () => ipcRenderer.invoke("ledger:import-confirm"),
   exportBackup: () => ipcRenderer.invoke("ledger:backup"),

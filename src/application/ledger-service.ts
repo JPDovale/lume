@@ -76,6 +76,9 @@ export class LedgerService {
     const existing = state.recurrences.find((r) => r.id === rule.id);
     if (
       existing &&
+      state.transactions.some(
+        (t) => linkOccurrence(t, [existing]).recurrenceId === existing.id,
+      ) &&
       (existing.startDate !== rule.startDate ||
         existing.frequency !== rule.frequency)
     )
@@ -116,6 +119,53 @@ export class LedgerService {
     )
       throw new Error("Esse nome já existe.");
     state[kind] = state[kind].filter((v) => v.id !== named.id).concat(named);
+    this.repository.save(state);
+    return this.snapshot();
+  }
+  deleteNamed(
+    kind: "categories" | "tags",
+    id: string,
+    replacementId: string | null = null,
+  ) {
+    if (kind !== "categories" && kind !== "tags")
+      throw new Error("Tipo inválido para exclusão.");
+    const state = this.repository.read();
+    if (!state[kind].some((entity) => entity.id === id))
+      throw new Error("Item não encontrado.");
+    const linked = (entry: { categoryId: string | null; tagIds: string[] }) =>
+      kind === "categories"
+        ? entry.categoryId === id
+        : entry.tagIds.includes(id);
+    const hasLinks =
+      state.transactions.some(linked) || state.recurrences.some(linked);
+    if (hasLinks && !replacementId)
+      throw new Error("Selecione um destino para os registros vinculados.");
+    if (
+      replacementId &&
+      (replacementId === id ||
+        !state[kind].some((entity) => entity.id === replacementId))
+    )
+      throw new Error("Selecione outro destino válido.");
+    const move = <T extends { categoryId: string | null; tagIds: string[] }>(
+      entry: T,
+    ): T => ({
+      ...entry,
+      categoryId:
+        kind === "categories" && entry.categoryId === id
+          ? replacementId
+          : entry.categoryId,
+      tagIds:
+        kind === "tags"
+          ? [
+              ...new Set(
+                entry.tagIds.map((tag) => (tag === id ? replacementId! : tag)),
+              ),
+            ]
+          : entry.tagIds,
+    });
+    state.transactions = state.transactions.map(move);
+    state.recurrences = state.recurrences.map(move);
+    state[kind] = state[kind].filter((entity) => entity.id !== id);
     this.repository.save(state);
     return this.snapshot();
   }

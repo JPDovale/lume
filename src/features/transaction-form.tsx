@@ -20,18 +20,32 @@ export function TransactionForm({
   ledger,
   recurring = false,
   initial,
+  initialRule,
   onSave,
 }: {
   ledger: Ledger;
   recurring?: boolean;
   initial?: Transaction;
+  initialRule?: Recurrence;
   onSave: (value: Transaction | Recurrence) => Promise<void>;
 }) {
-  const [ending, setEnding] = useState("none");
-  const [amountMode, setAmountMode] = useState("exact");
+  const source = initial ?? initialRule;
+  const lockedSchedule =
+    !!initialRule &&
+    ledger.transactions.some((t) => t.recurrenceId === initialRule.id);
+  const [ending, setEnding] = useState(
+    initialRule?.installmentCount
+      ? "count"
+      : initialRule?.endDate
+        ? "date"
+        : "none",
+  );
+  const [amountMode, setAmountMode] = useState(
+    initialRule?.amountMode ?? "exact",
+  );
   const pending = initial?.validationStatus === "pending";
   const origin = ledger.recurrences.find((r) => r.id === initial?.recurrenceId);
-  const [tags, setTags] = useState(initial?.tagIds ?? []),
+  const [tags, setTags] = useState(source?.tagIds ?? []),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   async function submit(e: React.SubmitEvent<HTMLFormElement>) {
@@ -44,7 +58,7 @@ export function TransactionForm({
       "confirm";
     try {
       const base = {
-        id: initial?.id ?? crypto.randomUUID(),
+        id: source?.id ?? crypto.randomUUID(),
         description: String(f.get("description")),
         amount:
           parseMoney(String(f.get("amount"))) *
@@ -55,7 +69,9 @@ export function TransactionForm({
         notes: String(f.get("notes")),
         recurrenceId: initial?.recurrenceId ?? null,
       };
-      const date = String(f.get("date"));
+      const date = lockedSchedule
+        ? initialRule!.startDate
+        : String(f.get("date"));
       await onSave(
         recurring
           ? {
@@ -66,8 +82,10 @@ export function TransactionForm({
               installmentCount:
                 ending === "count" ? Number(f.get("installmentCount")) : null,
               amountMode: amountMode as Recurrence["amountMode"],
-              frequency: String(f.get("frequency")) as Recurrence["frequency"],
-              active: true,
+              frequency: lockedSchedule
+                ? initialRule!.frequency
+                : (String(f.get("frequency")) as Recurrence["frequency"]),
+              active: initialRule?.active ?? true,
             }
           : {
               ...base,
@@ -96,6 +114,15 @@ export function TransactionForm({
     );
   return (
     <form onSubmit={submit} className="space-y-5">
+      {initialRule && (
+        <p className="rounded-lg border border-border p-3 text-sm text-muted-foreground">
+          As alterações valem para novas ocorrências. Valores e validações dos
+          lançamentos existentes serão preservados.
+          {lockedSchedule
+            ? " Início e frequência ficam fixos porque já há parcelas lançadas."
+            : ""}
+        </p>
+      )}
       {origin && (
         <div className="rounded-lg border border-border p-3 text-sm">
           <p>
@@ -119,7 +146,7 @@ export function TransactionForm({
         <Input
           id="description"
           name="description"
-          defaultValue={initial?.description}
+          defaultValue={source?.description}
           placeholder="Ex.: supermercado, aluguel, salário"
           required
           maxLength={300}
@@ -131,7 +158,9 @@ export function TransactionForm({
           <NativeSelect
             id="amountMode"
             value={amountMode}
-            onChange={(e) => setAmountMode(e.target.value)}
+            onChange={(e) =>
+              setAmountMode(e.target.value as "exact" | "approximate")
+            }
           >
             <NativeSelectOption value="exact">Exatamente</NativeSelectOption>
             <NativeSelectOption value="approximate">
@@ -153,8 +182,8 @@ export function TransactionForm({
             name="amount"
             inputMode="decimal"
             defaultValue={
-              initial
-                ? Math.abs(initial.amount / 100)
+              source
+                ? Math.abs(source.amount / 100)
                     .toFixed(2)
                     .replace(".", ",")
                 : ""
@@ -168,7 +197,7 @@ export function TransactionForm({
           <NativeSelect
             id="type"
             name="type"
-            defaultValue={initial && initial.amount > 0 ? "income" : "expense"}
+            defaultValue={source && source.amount > 0 ? "income" : "expense"}
           >
             <NativeSelectOption value="expense">Despesa</NativeSelectOption>
             <NativeSelectOption value="income">Receita</NativeSelectOption>
@@ -181,7 +210,7 @@ export function TransactionForm({
           <NativeSelect
             id="account"
             name="account"
-            defaultValue={initial?.accountId}
+            defaultValue={source?.accountId}
           >
             {ledger.accounts.map((a) => (
               <NativeSelectOption key={a.id} value={a.id}>
@@ -195,7 +224,7 @@ export function TransactionForm({
           <NativeSelect
             id="category"
             name="category"
-            defaultValue={initial?.categoryId ?? ""}
+            defaultValue={source?.categoryId ?? ""}
           >
             <NativeSelectOption value="">Sem categoria</NativeSelectOption>
             {ledger.categories.map((c) => (
@@ -215,7 +244,10 @@ export function TransactionForm({
             id="date"
             type="date"
             name="date"
-            defaultValue={initial?.date ?? localToday()}
+            defaultValue={
+              initialRule?.startDate ?? initial?.date ?? localToday()
+            }
+            disabled={lockedSchedule}
             required
           />
         </div>
@@ -225,7 +257,8 @@ export function TransactionForm({
             <NativeSelect
               id="frequency"
               name="frequency"
-              defaultValue="monthly"
+              defaultValue={initialRule?.frequency ?? "monthly"}
+              disabled={lockedSchedule}
             >
               <NativeSelectOption value="weekly">Semanal</NativeSelectOption>
               <NativeSelectOption value="monthly">Mensal</NativeSelectOption>
@@ -255,7 +288,13 @@ export function TransactionForm({
           {ending === "date" && (
             <div className="field">
               <Label htmlFor="endDate">Termina em</Label>
-              <Input id="endDate" type="date" name="endDate" required />
+              <Input
+                id="endDate"
+                type="date"
+                name="endDate"
+                defaultValue={initialRule?.endDate ?? ""}
+                required
+              />
             </div>
           )}
           {ending === "count" && (
@@ -268,7 +307,7 @@ export function TransactionForm({
                 min={1}
                 max={1200}
                 step={1}
-                defaultValue={12}
+                defaultValue={initialRule?.installmentCount ?? 12}
                 required
               />
               <p className="text-xs text-muted-foreground">
@@ -307,7 +346,7 @@ export function TransactionForm({
         <Textarea
           id="notes"
           name="notes"
-          defaultValue={initial?.notes}
+          defaultValue={source?.notes}
           placeholder="Algum detalhe para lembrar?"
         />
       </div>
@@ -336,7 +375,9 @@ export function TransactionForm({
         {busy
           ? "Salvando…"
           : recurring
-            ? "Criar recorrência"
+            ? initialRule
+              ? "Salvar recorrência"
+              : "Criar recorrência"
             : initial
               ? "Salvar alterações"
               : "Registrar lançamento"}

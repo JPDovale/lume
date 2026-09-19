@@ -135,12 +135,12 @@ O vetor original está em [`public/icon.svg`](public/icon.svg). `npm run icons` 
 
 ```sh
 npm run package:linux  # release/Lume-linux-x86_64.AppImage
-npm run package:win    # release/Lume-Setup-0.2.0-x64.exe (executar no Windows)
+npm run package:win    # release/Lume-Setup-0.2.1-x64.exe (executar no Windows)
 ```
 
 O GitHub Actions testa e empacota em runners nativos Linux e Windows a cada push em `main`, pull request e execução manual. Tags `v*` publicam os dois arquivos e `SHA256SUMS.txt` em Releases. Os pacotes são x64; o instalador Windows ainda não possui assinatura de código. Não há atualização automática dentro do Lume.
 
-Para publicar uma versão, atualize `package.json` e `package-lock.json`, faça commit e envie a tag correspondente (por exemplo, `v0.2.1`).
+Para publicar uma versão, atualize `package.json` e `package-lock.json`, faça commit e envie a tag correspondente (por exemplo, `v0.2.2`).
 
 ### Linux com Gear Lever
 

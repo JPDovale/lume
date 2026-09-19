@@ -1,0 +1,150 @@
+{
+  "version": "cashflow-v2",
+  "data": "Synthetic deterministic scenarios; no personal data; MAE in cents; not an independent real-world accuracy claim.",
+  "results": [
+    {
+      "scenario": "stable",
+      "horizon": 1,
+      "tests": 12,
+      "modelMae": 0,
+      "naiveMae": 0,
+      "meanMae": 0
+    },
+    {
+      "scenario": "stable",
+      "horizon": 2,
+      "tests": 12,
+      "modelMae": 0,
+      "naiveMae": 0,
+      "meanMae": 0
+    },
+    {
+      "scenario": "stable",
+      "horizon": 6,
+      "tests": 12,
+      "modelMae": 0,
+      "naiveMae": 0,
+      "meanMae": 0
+    },
+    {
+      "scenario": "trend",
+      "horizon": 1,
+      "tests": 12,
+      "modelMae": 120,
+      "naiveMae": 800,
+      "meanMae": 12200
+    },
+    {
+      "scenario": "trend",
+      "horizon": 2,
+      "tests": 12,
+      "modelMae": 342,
+      "naiveMae": 1600,
+      "meanMae": 12600
+    },
+    {
+      "scenario": "trend",
+      "horizon": 6,
+      "tests": 12,
+      "modelMae": 1976,
+      "naiveMae": 4800,
+      "meanMae": 14200
+    },
+    {
+      "scenario": "levelChange",
+      "horizon": 1,
+      "tests": 12,
+      "modelMae": 0,
+      "naiveMae": 0,
+      "meanMae": 4950
+    },
+    {
+      "scenario": "levelChange",
+      "horizon": 2,
+      "tests": 12,
+      "modelMae": 0,
+      "naiveMae": 0,
+      "meanMae": 5129
+    },
+    {
+      "scenario": "levelChange",
+      "horizon": 6,
+      "tests": 12,
+      "modelMae": 2359,
+      "naiveMae": 0,
+      "meanMae": 5999
+    },
+    {
+      "scenario": "annual",
+      "horizon": 1,
+      "tests": 12,
+      "modelMae": 0,
+      "naiveMae": 10167,
+      "meanMae": 6121
+    },
+    {
+      "scenario": "annual",
+      "horizon": 2,
+      "tests": 12,
+      "modelMae": 122,
+      "naiveMae": 9667,
+      "meanMae": 6037
+    },
+    {
+      "scenario": "annual",
+      "horizon": 6,
+      "tests": 12,
+      "modelMae": 877,
+      "naiveMae": 8333,
+      "meanMae": 5847
+    },
+    {
+      "scenario": "isolatedSpike",
+      "horizon": 1,
+      "tests": 12,
+      "modelMae": 13333,
+      "naiveMae": 26667,
+      "meanMae": 18278
+    },
+    {
+      "scenario": "isolatedSpike",
+      "horizon": 2,
+      "tests": 12,
+      "modelMae": 13333,
+      "naiveMae": 26667,
+      "meanMae": 17897
+    },
+    {
+      "scenario": "isolatedSpike",
+      "horizon": 6,
+      "tests": 12,
+      "modelMae": 13333,
+      "naiveMae": 26667,
+      "meanMae": 16254
+    },
+    {
+      "scenario": "intermittent",
+      "horizon": 1,
+      "tests": 12,
+      "modelMae": 0,
+      "naiveMae": 20000,
+      "meanMae": 10169
+    },
+    {
+      "scenario": "intermittent",
+      "horizon": 2,
+      "tests": 12,
+      "modelMae": 769,
+      "naiveMae": 0,
+      "meanMae": 9819
+    },
+    {
+      "scenario": "intermittent",
+      "horizon": 6,
+      "tests": 12,
+      "modelMae": 3846,
+      "naiveMae": 0,
+      "meanMae": 9787
+    }
+  ]
+}

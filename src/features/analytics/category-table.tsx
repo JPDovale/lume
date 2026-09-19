@@ -11,7 +11,7 @@ import {
 import type { SpendingAnalysis } from "@/domain/analytics/spending";
 import { money } from "@/domain/model";
 import { Panel } from "./shared";
-import { palette, maybeMoney, monthLabel } from "./chart-format";
+import { palette, monthLabel, forecastLabel, maybeMoney } from "./chart-format";
 export function CategoryTable({
   analysis,
   selected,
@@ -21,11 +21,47 @@ export function CategoryTable({
   selected: string;
   onSelect: (id: string) => void;
 }) {
+  const next = analysis.future[0];
+  const reconciled =
+    (next.income.reconciledRecurrences ?? 0) +
+    (next.expense.reconciledRecurrences ?? 0);
+  const balance =
+    next.income.expected !== null && next.expense.expected !== null
+      ? next.income.expected - next.expense.expected
+      : null;
   return (
     <Panel
       title="Cada categoria, com contexto"
-      description="Comparação até o mesmo dia do mês anterior. Selecione uma categoria para investigar."
+      description="A estimativa de cada categoria compõe o total de gastos. Cenários de variação ficam no detalhe da categoria."
     >
+      <div
+        className="grid sm:grid-cols-3 gap-3 mb-4"
+        aria-label="Contexto da previsão"
+      >
+        {[
+          { label: "Entradas estimadas", value: next.income.expected },
+          { label: "Total de gastos estimado", value: next.expense.expected },
+          { label: "Entradas menos gastos", value: balance },
+        ].map((item) => (
+          <div key={item.label} className="rounded-lg bg-secondary/50 p-3">
+            <p className="text-xs text-muted-foreground">
+              {item.label} · {monthLabel(next.month)}
+            </p>
+            <p
+              className={`mt-2 text-lg font-medium tabular-nums ${item.value !== null && item.value < 0 ? "text-warning" : ""}`}
+            >
+              {maybeMoney(item.value)}
+            </p>
+          </div>
+        ))}
+      </div>
+      {!!reconciled && (
+        <p className="mb-4 text-xs text-muted-foreground">
+          Correspondência estimada: lançamentos importados compatíveis com{" "}
+          {reconciled} recorrência(s) foram considerados uma única vez na
+          previsão.
+        </p>
+      )}
       <div className="overflow-x-auto">
         <Table className="min-w-[790px]">
           <TableHeader>
@@ -34,7 +70,9 @@ export function CategoryTable({
               <TableHead className="text-right">Neste mês</TableHead>
               <TableHead className="text-right">Anterior equivalente</TableHead>
               <TableHead className="text-right">Variação</TableHead>
-              <TableHead className="text-right">Próximo mês</TableHead>
+              <TableHead className="text-right">
+                Estimativa · {monthLabel(next.month)}
+              </TableHead>
               <TableHead>Base da previsão</TableHead>
             </TableRow>
           </TableHeader>
@@ -75,23 +113,39 @@ export function CategoryTable({
                     : `${c.change > 0 ? "+" : ""}${c.change}%`}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {maybeMoney(c.next.expected)}
-                  {c.next.low !== null && (
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {money(c.next.low)} a {money(c.next.high!)}
-                    </p>
-                  )}
+                  {forecastLabel(c.next)}
+                  {c.next.expected !== null &&
+                    c.next.expected > 0 &&
+                    !!next.expense.expected && (
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {Math.round(
+                          (c.next.expected / next.expense.expected) * 100,
+                        )}
+                        % do total estimado
+                      </p>
+                    )}
                 </TableCell>
                 <TableCell>
                   <Badge
                     variant="outline"
                     className="font-normal whitespace-nowrap"
                   >
-                    {c.next.quality}
+                    {c.next.quality === "Volátil"
+                      ? "Baixa previsibilidade"
+                      : c.next.quality}
                   </Badge>
                 </TableCell>
               </TableRow>
             ))}
+            <TableRow className="bg-secondary/40 font-medium">
+              <TableCell colSpan={4}>Total de despesas previsto</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {forecastLabel(next.expense)}
+              </TableCell>
+              <TableCell className="text-xs text-muted-foreground">
+                Soma das categorias
+              </TableCell>
+            </TableRow>
           </TableBody>
         </Table>
       </div>
@@ -147,6 +201,13 @@ export function CategoryDetail({
             COMPOSIÇÃO DA PREVISÃO ·{" "}
             {monthLabel(analysis.future[0].month).toUpperCase()}
           </h3>
+          {category.next.diagnostics &&
+            !category.next.diagnostics.supported && (
+              <p className="mb-4 text-sm text-muted-foreground">
+                Sem repetição suficiente para projetar gastos variáveis. Apenas
+                lançamentos conhecidos e compromissos entram na estimativa.
+              </p>
+            )}
           <dl className="space-y-4 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">
@@ -166,9 +227,47 @@ export function CategoryDetail({
             </div>
             <div className="flex justify-between gap-3 border-t border-border pt-4">
               <dt>Estimativa total</dt>
-              <dd>{maybeMoney(category.next.expected)}</dd>
+              <dd>{forecastLabel(category.next)}</dd>
             </div>
           </dl>
+          {category.next.low !== null &&
+            category.next.quality !== "Sem padrão" && (
+              <details className="mt-4 rounded-lg border border-border p-3 text-xs">
+                <summary className="cursor-pointer font-medium">
+                  {category.next.quality === "Volátil"
+                    ? "Por que a previsão é instável?"
+                    : "Ver cenário de variação"}
+                </summary>
+                <div className="mt-3 space-y-2 text-muted-foreground leading-relaxed">
+                  {category.next.quality === "Volátil" && (
+                    <p>
+                      O histórico tem variações e erros altos demais para
+                      apresentar uma faixa provável confiável. A estimativa
+                      central também deve ser tratada com cautela.
+                    </p>
+                  )}
+                  <p>
+                    Cenário de variação: {money(category.next.low)} a{" "}
+                    {money(category.next.high!)}. Esses extremos não são uma
+                    previsão provável nem devem ser comparados com a estimativa
+                    central do total.
+                  </p>
+                  <p>
+                    O cenário superior do total de despesas é{" "}
+                    {maybeMoney(analysis.future[0].expense.high)}. Os extremos
+                    por categoria não são somados; cada cenário combina erros
+                    dos mesmos meses. O total central é{" "}
+                    {maybeMoney(analysis.future[0].expense.expected)}.
+                  </p>
+                </div>
+              </details>
+            )}
+          {category.next.low === null && (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Sem observações suficientes para uma faixa de variação confiável
+              neste horizonte.
+            </p>
+          )}
           <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
             Valores já registrados podem estar contidos nos padrões ou na parte
             variável; a estimativa elimina essa sobreposição.

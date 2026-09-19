@@ -1,3 +1,4 @@
+import type { ForecastSlice } from "@/domain/analytics/forecast";
 import { money } from "@/domain/model";
 export const palette = [
   "#8aaef1",
@@ -40,3 +41,8 @@ export const tooltipStyle = {
 export const axisStyle = { fill: chartColors.muted, fontSize: 11 };
 export const maybeMoney = (value: number | null) =>
   value === null ? "Sem base suficiente" : money(value);
+
+export const forecastLabel = (slice: ForecastSlice) =>
+  slice.quality === "Sem padrão" && slice.expected === 0
+    ? "Sem padrão"
+    : maybeMoney(slice.expected);

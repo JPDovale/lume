@@ -1,3 +1,5 @@
+import { PlanningService } from "../src/application/planning-service";
+import { CalculatorService } from "../src/application/calculator-service";
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import { join } from "node:path";
 import { readFileSync, copyFileSync } from "node:fs";
@@ -19,6 +21,8 @@ else
       const file = join(app.getPath("userData"), "lume.sqlite");
       const repo = await SqliteLedgerRepository.open(file, wasm);
       const service = new LedgerService(repo, { today: localToday });
+      const planning = new PlanningService(repo, { today: localToday });
+      const calculator = new CalculatorService(repo);
       const importer = new ActualImporter(wasm);
       let pending: Ledger | null = null;
       const win = new BrowserWindow({
@@ -48,6 +52,15 @@ else
             throw new Error("Origem inválida");
           return fn(...args);
         });
+      handle("planning:save", (config) => {
+        planning.save(config);
+        return service.snapshot();
+      });
+      handle("calculator:history", () => calculator.history());
+      handle("calculator:calculate", (expression) =>
+        calculator.calculate(expression),
+      );
+      handle("ledger:settings", (settings) => service.saveSettings(settings));
       handle("ledger:snapshot", () => service.snapshot());
       handle("ledger:transaction", (tx) => service.saveTransaction(tx));
       handle("ledger:recurrence", (r) => service.saveRecurrence(r));

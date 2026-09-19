@@ -43,7 +43,10 @@ export function WealthChart({
       date: p.date,
       actual: null,
       expected: p.expected,
-      range: [p.low, p.high] as [number, number],
+      range:
+        p.low !== null && p.high !== null
+          ? ([p.low, p.high] as [number, number])
+          : null,
     })),
   );
   const last = analysis.projection.at(-1);

@@ -1,3 +1,4 @@
+import { BehaviorPanel } from "./behavior-panel";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, Lightbulb, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { money, localToday, type Ledger } from "@/domain/model";
 import { spendingAnalysis } from "@/domain/analytics/spending";
 import { Metric, Panel, PeriodControls, ForecastMethod } from "./shared";
-import { maybeMoney, monthLabel } from "./chart-format";
+import { forecastLabel, maybeMoney, monthLabel } from "./chart-format";
 import { SpendingTimeline, CategoryComposition } from "./spending-charts";
 import { CategoryDetail, CategoryTable } from "./category-table";
 export function SpendingDashboard({ ledger }: { ledger: Ledger }) {
@@ -129,6 +130,11 @@ export function SpendingDashboard({ ledger }: { ledger: Ledger }) {
         <SpendingTimeline analysis={analysis} categoryId={selected} />
         <CategoryComposition analysis={analysis} onSelect={setSelected} />
       </div>
+      <BehaviorPanel
+        analysis={analysis}
+        selected={selected}
+        onSelect={setSelected}
+      />
       <CategoryDetail analysis={analysis} selected={selected} />
       <CategoryTable
         analysis={analysis}
@@ -137,7 +143,7 @@ export function SpendingDashboard({ ledger }: { ledger: Ledger }) {
       />
       <Panel
         title="Próximos meses, categoria por categoria"
-        description="Estimativas incluem compromissos conhecidos. Faixas detalhadas disponíveis na categoria."
+        description="Gastos isolados ou sem repetição suficiente não são projetados. Compromissos já registrados continuam incluídos."
       >
         <div className="overflow-x-auto">
           <Table className="min-w-[540px]">
@@ -160,10 +166,7 @@ export function SpendingDashboard({ ledger }: { ledger: Ledger }) {
                       key={f.month}
                       className="text-right tabular-nums whitespace-nowrap"
                     >
-                      {maybeMoney(
-                        f.categories.find((v) => v.id === c.id)?.expected ??
-                          null,
-                      )}
+                      {forecastLabel(f.categories.find((v) => v.id === c.id)!)}
                     </TableCell>
                   ))}
                 </TableRow>

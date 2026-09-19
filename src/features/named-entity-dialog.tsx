@@ -23,7 +23,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import type { Ledger, Named } from "@/domain/model";
+import { localToday, type Ledger, type Named } from "@/domain/model";
 export type NamedSelection = {
   kind: "categories" | "tags";
   entity: Named;
@@ -53,7 +53,15 @@ export function NamedEntityDialog({
       : entry.tagIds.includes(entity.id);
   const transactionCount = ledger.transactions.filter(linked).length;
   const recurrenceCount = ledger.recurrences.filter(linked).length;
-  const hasLinks = transactionCount + recurrenceCount > 0;
+  const planCount =
+    kind === "categories"
+      ? (ledger.monthlyPlans ?? []).filter(
+          (p) =>
+            p.config.month >= localToday().slice(0, 7) &&
+            p.config.categories.some((c) => c.categoryId === entity.id),
+        ).length
+      : 0;
+  const hasLinks = transactionCount + recurrenceCount + planCount > 0;
   const candidates = ledger[kind].filter((item) => item.id !== entity.id);
   async function save() {
     setBusy(true);
@@ -130,6 +138,8 @@ export function NamedEntityDialog({
           <AlertDialogDescription>
             {transactionCount} lançamento(s) e {recurrenceCount} recorrência(s)
             vinculados.{" "}
+            {planCount > 0 &&
+              `${planCount} planejamento(s) também serão migrados. `}{" "}
             {hasLinks
               ? "Escolha o destino antes de excluir. Os registros e seus valores serão preservados."
               : "Este item não tem registros vinculados."}

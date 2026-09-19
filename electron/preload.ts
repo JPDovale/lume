@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { LumeApi } from "../src/application/api";
 const api: LumeApi = {
+  saveMonthlyPlan: (config) => ipcRenderer.invoke("planning:save", config),
+  saveSettings: (settings) => ipcRenderer.invoke("ledger:settings", settings),
+  calculatorHistory: () => ipcRenderer.invoke("calculator:history"),
+  calculate: (expression) =>
+    ipcRenderer.invoke("calculator:calculate", expression),
   snapshot: () => ipcRenderer.invoke("ledger:snapshot"),
   saveTransaction: (t) => ipcRenderer.invoke("ledger:transaction", t),
   saveRecurrence: (r) => ipcRenderer.invoke("ledger:recurrence", r),

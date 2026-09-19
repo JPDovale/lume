@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Trash2 } from "lucide-react";
 import { NamedEntityDialog, type NamedSelection } from "./named-entity-dialog";
 import { useState } from "react";
@@ -16,6 +17,32 @@ export function Organization({
   const [selection, setSelection] = useState<NamedSelection | null>(null);
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  async function accountSetting(id: string, include?: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      const settings = ledger.settings ?? {
+        primaryAccountId: null,
+        excludedSpendingAccountIds: [],
+      };
+      onChange(
+        await window.lume.saveSettings(
+          include === undefined
+            ? { ...settings, primaryAccountId: id }
+            : {
+                ...settings,
+                excludedSpendingAccountIds: include
+                  ? settings.excludedSpendingAccountIds.filter((a) => a !== id)
+                  : [...settings.excludedSpendingAccountIds, id],
+              },
+        ),
+      );
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function create(
     kind: "accounts" | "categories" | "tags",
     form: HTMLFormElement,
@@ -99,7 +126,7 @@ export function Organization({
                 {ledger[kind].map((v) => (
                   <div
                     key={v.id}
-                    className="flex items-center justify-between gap-2 text-sm border-b border-border pb-3"
+                    className={`flex ${kind === "accounts" ? "flex-col items-start" : "items-center justify-between"} gap-2 text-sm border-b border-border pb-3`}
                   >
                     {kind === "tags" ? (
                       <Badge
@@ -136,18 +163,49 @@ export function Organization({
                       </div>
                     )}
                     {kind === "accounts" && (
-                      <span className="text-muted-foreground tabular-nums">
-                        {money(
-                          ledger.transactions
-                            .filter(
-                              (t) =>
-                                t.accountId === v.id &&
-                                t.date <= localToday() &&
-                                isConfirmed(t),
-                            )
-                            .reduce((s, t) => s + t.amount, 0),
-                        )}
-                      </span>
+                      <div className="space-y-2 w-full">
+                        <span className="text-muted-foreground tabular-nums">
+                          {money(
+                            ledger.transactions
+                              .filter(
+                                (t) =>
+                                  t.accountId === v.id &&
+                                  t.date <= localToday() &&
+                                  isConfirmed(t),
+                              )
+                              .reduce((s, t) => s + t.amount, 0),
+                          )}
+                        </span>
+                        <div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={
+                              busy || ledger.settings?.primaryAccountId === v.id
+                            }
+                            onClick={() => void accountSetting(v.id)}
+                          >
+                            {ledger.settings?.primaryAccountId === v.id
+                              ? "Conta principal"
+                              : "Definir como principal"}
+                          </Button>
+                        </div>
+                        <label className="flex items-center justify-end gap-2 text-xs">
+                          <Checkbox
+                            disabled={busy}
+                            checked={
+                              !ledger.settings?.excludedSpendingAccountIds.includes(
+                                v.id,
+                              )
+                            }
+                            onCheckedChange={(include) =>
+                              void accountSetting(v.id, include === true)
+                            }
+                          />
+                          <span className="sr-only">{v.name}: </span>
+                          Incluir nos gastos e previsões
+                        </label>
+                      </div>
                     )}
                   </div>
                 ))}

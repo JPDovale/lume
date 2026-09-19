@@ -9,7 +9,6 @@ import { CashflowForecast } from "../src/domain/analytics/forecast";
 import { spendingAnalysis } from "../src/domain/analytics/spending";
 import { netWorthAnalysis } from "../src/domain/analytics/net-worth";
 import { detectMonthlyPatterns } from "../src/domain/analytics/patterns";
-import { estimateSeries } from "../src/domain/analytics/statistics";
 const tx = (
   id: string,
   date: string,
@@ -178,7 +177,7 @@ describe("forecast accounting", () => {
       "2026-04",
     );
     expect(large.month("2026-05").expense.expected).toBe(15000);
-    expect(large.month("2026-05").expense.low).toBe(15000);
+    expect(large.month("2026-05").expense.low).toBeNull(); // Known spending is a floor, not an estimated confidence interval.
   });
   it("replaces a historical native merchant pattern rather than double counting it", () => {
     const s = ledger(
@@ -243,15 +242,14 @@ describe("forecast accounting", () => {
     expect(r.expense.expected).toBeNull();
     expect(r.expense.quality).toBe("Sem base");
   });
-  it("keeps zero-spend months in the estimate and caps long-range trends", () => {
+  it("does not amortize an isolated expense across future months", () => {
     const model = new CashflowForecast(
       ledger([tx("seed", "2026-01-02", -1), tx("only", "2026-02-02", -9000)]),
       "2026-04",
     );
-    expect(model.month("2026-05").expense.expected).toBe(3000);
-    const modelValue = estimateSeries([100, 200, 300, 400], 12);
-    expect(modelValue.level).toBe(300);
-    expect(modelValue.trend).toBe(75);
+    expect(model.month("2026-05").expense.expected).toBeNull(); // March has no activity: coverage is unknown.
+    expect(model.month("2026-05").categories[0].quality).toBe("Sem base");
+    expect(model.missingMonths).toContain("2026-03");
   });
   it("category forecasts reconcile exactly to the total at each horizon", () => {
     const model = new CashflowForecast(ledger(history(), [rent]), "2026-04");
@@ -260,8 +258,10 @@ describe("forecast accounting", () => {
       expect(r.expense.expected).toBe(
         r.categories.reduce((sum, c) => sum + c.expected!, 0),
       );
-      expect(r.expense.low!).toBeLessThanOrEqual(r.expense.expected!);
-      expect(r.expense.high!).toBeGreaterThanOrEqual(r.expense.expected!);
+      if (r.expense.low !== null) {
+        expect(r.expense.low).toBeLessThanOrEqual(r.expense.expected!);
+        expect(r.expense.high).toBeGreaterThanOrEqual(r.expense.expected!);
+      } else expect(r.expense.high).toBeNull();
     }
   });
 });

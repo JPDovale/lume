@@ -57,6 +57,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -69,4 +70,9 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           sha256sum *.AppImage *.exe > SHA256SUMS.txt
-          gh release create "$RELEASE_TAG" *.AppImage *.exe SHA256SUMS.txt --verify-tag --title "Lume $RELEASE_TAG" --generate-notes
+          notes="$GITHUB_WORKSPACE/docs/releases/$RELEASE_TAG.md"
+          if [ -f "$notes" ]; then
+            gh release create "$RELEASE_TAG" *.AppImage *.exe SHA256SUMS.txt --verify-tag --title "Lume $RELEASE_TAG" --notes-file "$notes"
+          else
+            gh release create "$RELEASE_TAG" *.AppImage *.exe SHA256SUMS.txt --verify-tag --title "Lume $RELEASE_TAG" --generate-notes
+          fi

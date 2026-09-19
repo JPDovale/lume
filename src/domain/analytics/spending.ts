@@ -1,3 +1,4 @@
+import { behaviorAnalysis } from "./behavior";
 import type { Ledger, Transaction } from "../model";
 import { money } from "../model";
 import { atDay, previousMonths, shiftMonth } from "./calendar";
@@ -53,6 +54,7 @@ export function spendingAnalysis(
       );
       return {
         ...c,
+        behavior: behaviorAnalysis(rows, model.sampleMonths, today),
         actual,
         previous: comparison,
         delta: actual - comparison,
@@ -103,6 +105,31 @@ export function spendingAnalysis(
     }),
   );
   const insights: SpendingInsight[] = [];
+  const changed = [...categories]
+    .filter(
+      (c) =>
+        c.behavior.comparable &&
+        Math.abs(c.behavior.recentAverage - c.behavior.previousAverage) >=
+          10000,
+    )
+    .sort(
+      (a, b) =>
+        Math.abs(b.behavior.recentAverage - b.behavior.previousAverage) -
+        Math.abs(a.behavior.recentAverage - a.behavior.previousAverage),
+    )
+    .slice(0, 2);
+  for (const c of changed) {
+    const b = c.behavior;
+    const increasing = b.recentAverage > b.previousAverage;
+    const frequency = Math.abs(b.frequencyImpact) >= Math.abs(b.ticketImpact);
+    insights.push({
+      id: `behavior:${c.id}`,
+      categoryId: c.id,
+      tone: increasing ? "warning" : "positive",
+      title: `${c.name}: ${increasing ? "aumento" : "queda"} nos últimos três meses`,
+      detail: `Média mensal de ${money(b.previousAverage)} para ${money(b.recentAverage)}, comparando dois trimestres completos. A maior contribuição veio ${frequency ? `da frequência (${b.previousCount} → ${b.recentCount} lançamentos/mês)` : `do valor médio (${money(b.previousTicket)} → ${money(b.recentTicket)})`}.`,
+    });
+  }
   const growing = [...categories]
     .filter(
       (c) =>
@@ -167,7 +194,7 @@ export function spendingAnalysis(
       categoryId: null,
       tone: "info",
       title: `${money(next.expected)} previstos no próximo mês`,
-      detail: `Faixa de cenário: ${money(next.low!)} a ${money(next.high!)}. ${money(next.known + next.scheduled)} em lançamentos/agendamentos conhecidos; ${money(next.detected)} em padrões mensais estimados.`,
+      detail: `${next.low !== null && next.high !== null ? `Cenários empíricos: ${money(next.low)} a ${money(next.high)}.` : "Sem amostra suficiente para estimar uma faixa de variação conjunta."} ${money(next.known + next.scheduled)} em registros e recorrências; ${money(next.detected)} em padrões mensais estimados.`,
     });
   const unclassified = categories.find((c) => c.id === UNCATEGORIZED);
   if (unclassified?.actual)

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Search, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,12 @@ export function Transactions({
           .includes(search.toLowerCase()),
     )
     .sort((a, b) => b.date.localeCompare(a.date));
+  const visibleRows = rows.slice(page * 30, page * 30 + 30);
+  const monthCounts = new Map<string, number>();
+  for (const row of rows) {
+    const key = row.date.slice(0, 7);
+    monthCounts.set(key, (monthCounts.get(key) ?? 0) + 1);
+  }
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
@@ -171,91 +177,125 @@ export function Transactions({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.slice(page * 30, page * 30 + 30).map((t) => (
-              <TableRow key={t.id}>
-                <TableCell>
-                  <p className="font-medium">{t.description}</p>
-                  {(t.transfer || t.recurrenceId || t.openingBalance) && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t.transfer
-                        ? "Transferência"
-                        : t.openingBalance
-                          ? "Saldo inicial"
-                          : installmentLabel(t)}
-                    </p>
-                  )}
-                  {t.recurrenceId && (
-                    <Button
-                      size="sm"
-                      variant="link"
-                      className="p-0 h-auto text-xs"
-                      onClick={() => onOpenRecurrence(t.recurrenceId!)}
-                    >
-                      {ledger.recurrences.find((r) => r.id === t.recurrenceId)
-                        ?.description ?? "Ver recorrência"}
-                    </Button>
-                  )}
-                  {t.validationStatus === "pending" && (
-                    <div className="mt-1">
-                      <Badge
-                        variant="outline"
-                        className="text-amber-300 border-amber-500/30"
-                      >
-                        Pendente de validação
-                      </Badge>
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span className="text-muted-foreground">
-                    {ledger.categories.find((c) => c.id === t.categoryId)
-                      ?.name ?? "Sem categoria"}
-                  </span>
-                  <div className="flex gap-1 mt-1">
-                    {t.tagIds.map((id) => (
-                      <Badge
-                        key={id}
-                        variant="secondary"
-                        className="text-[10px]"
-                      >
-                        {ledger.tags.find((t) => t.id === id)?.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {ledger.accounts.find((a) => a.id === t.accountId)?.name}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {t.date.split("-").reverse().join("/")}
-                </TableCell>
-                <TableCell
-                  className={`text-right tabular-nums ${t.amount > 0 ? "text-primary" : ""}`}
-                >
-                  {t.validationStatus === "pending" ? "≈ " : ""}
-                  {money(t.amount)}
-                </TableCell>
-                <TableCell>
-                  {t.validationStatus === "pending" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onEdit(t)}
-                      aria-label={`Validar ${t.description}`}
-                    >
-                      Validar
-                    </Button>
-                  )}
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Editar ${t.description}`}
-                    onClick={() => onEdit(t)}
+            {visibleRows.map((t, index) => (
+              <Fragment key={t.id}>
+                {(index === 0 ||
+                  visibleRows[index - 1].date.slice(0, 7) !==
+                    t.date.slice(0, 7)) && (
+                  <TableRow
+                    className="bg-secondary/80 hover:bg-secondary/80"
+                    data-month-divider={t.date.slice(0, 7)}
                   >
-                    <Pencil size={15} />
-                  </Button>
-                </TableCell>
-              </TableRow>
+                    <TableCell colSpan={6} className="py-3 font-medium">
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <span className="capitalize">
+                          {new Date(
+                            `${t.date.slice(0, 7)}-02T12:00:00Z`,
+                          ).toLocaleDateString("pt-BR", {
+                            month: "long",
+                            year: "numeric",
+                            timeZone: "UTC",
+                          })}
+                          {index === 0 &&
+                          page > 0 &&
+                          rows[page * 30 - 1]?.date.slice(0, 7) ===
+                            t.date.slice(0, 7)
+                            ? " · continuação"
+                            : ""}
+                        </span>
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {monthCounts.get(t.date.slice(0, 7))} lançamentos no
+                          filtro
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                <TableRow>
+                  <TableCell>
+                    <p className="font-medium">{t.description}</p>
+                    {(t.transfer || t.recurrenceId || t.openingBalance) && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t.transfer
+                          ? "Transferência"
+                          : t.openingBalance
+                            ? "Saldo inicial"
+                            : installmentLabel(t)}
+                      </p>
+                    )}
+                    {t.recurrenceId && (
+                      <Button
+                        size="sm"
+                        variant="link"
+                        className="p-0 h-auto text-xs"
+                        onClick={() => onOpenRecurrence(t.recurrenceId!)}
+                      >
+                        {ledger.recurrences.find((r) => r.id === t.recurrenceId)
+                          ?.description ?? "Ver recorrência"}
+                      </Button>
+                    )}
+                    {t.validationStatus === "pending" && (
+                      <div className="mt-1">
+                        <Badge
+                          variant="outline"
+                          className="text-amber-300 border-amber-500/30"
+                        >
+                          Pendente de validação
+                        </Badge>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-muted-foreground">
+                      {ledger.categories.find((c) => c.id === t.categoryId)
+                        ?.name ?? "Sem categoria"}
+                    </span>
+                    <div className="flex gap-1 mt-1">
+                      {t.tagIds.map((id) => (
+                        <Badge
+                          key={id}
+                          variant="secondary"
+                          className="text-[10px]"
+                        >
+                          {ledger.tags.find((t) => t.id === id)?.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {ledger.accounts.find((a) => a.id === t.accountId)?.name}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {t.date.split("-").reverse().join("/")}
+                  </TableCell>
+                  <TableCell
+                    className={`text-right tabular-nums ${t.amount > 0 ? "text-primary" : ""}`}
+                  >
+                    {t.validationStatus === "pending" ? "≈ " : ""}
+                    {money(t.amount)}
+                  </TableCell>
+                  <TableCell>
+                    {t.validationStatus === "pending" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onEdit(t)}
+                        aria-label={`Validar ${t.description}`}
+                      >
+                        Validar
+                      </Button>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Editar ${t.description}`}
+                      onClick={() => onEdit(t)}
+                    >
+                      <Pencil size={15} />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              </Fragment>
             ))}
           </TableBody>
         </Table>

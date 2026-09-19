@@ -151,29 +151,38 @@ export function ForecastMethod() {
       <summary>Como estas estimativas são calculadas?</summary>
       <div className="space-y-2 mt-3">
         <p>
-          Método: média ponderada de até seis meses completos, com mais peso nos
-          meses recentes. O primeiro mês observado é excluído por poder estar
-          incompleto. São necessários dois meses de referência; uma tendência
-          limitada a 25% só é aplicada a partir de quatro meses.
+          Visão geral, gastos, planejamento e patrimônio usam o mesmo motor.
+          Recorrências exatas respeitam valor, calendário e término; aproximadas
+          usam o histórico validado. Ocorrências já registradas substituem a
+          previsão correspondente. Pendências não treinam o modelo.
         </p>
         <p>
-          Compromissos cadastrados e padrões mensais são separados da parte
-          variável. Gastos variáveis já registrados no mês são um piso para a
-          previsão, sem serem somados novamente à média. O fechamento do mês
-          nunca fica abaixo do que já foi registrado.
+          A parte variável usa até 36 meses completos. A seleção compara nível
+          recente, histórico ponderado, tendência robusta amortecida,
+          ocorrência/valor para séries intermitentes e repetição anual quando há
+          dois ciclos. As simulações usam o horizonte solicitado e refazem a
+          seleção com os dados disponíveis em cada momento. O erro exibido é
+          dessa avaliação, não do ajuste ao histórico inteiro.
         </p>
         <p>
-          Padrões detectados exigem três meses consecutivos, um lançamento por
-          mês, mesma conta/categoria/descrição, datas próximas e valores pouco
-          variáveis. São hipóteses, não agendamentos. Não criam lançamentos. Uma
-          recorrência cadastrada com a mesma identificação substitui essa
-          hipótese.
+          Gastos isolados não são distribuídos automaticamente pelos meses
+          seguintes. Meses sem qualquer movimento confirmado são tratados como
+          possíveis lacunas: a projeção usa o trecho contínuo posterior. Isso
+          também pode limitar a análise de contas pouco movimentadas.
         </p>
         <p>
-          A faixa usa a dispersão histórica e uma margem de 12% para padrões
-          detectados. É um cenário de variação, sem probabilidade garantida. Não
-          modela inflação, sazonalidade anual ou rentabilidade. Transferências e
-          saldos iniciais ficam fora do fluxo de gastos e receitas.
+          Faixas só aparecem com pelo menos oito erros de previsão comparáveis.
+          Cenários conjuntos alinham os erros pelos meses observados,
+          preservando movimentos simultâneos entre categorias. São quantis
+          empíricos, sem garantia de cobertura probabilística; horizontes com
+          pouca evidência ficam sem faixa. Não presumimos inflação,
+          rentabilidade ou causalidade.
+        </p>
+        <p>
+          Fechamentos futuros poderão corrigir viés recorrente apenas se houver
+          previsões salvas antes do mês, método e contexto compatíveis e melhora
+          em validação temporal. Percentuais de reserva do planejamento são
+          decisões de orçamento: não alteram o padrão de gastos estimado.
         </p>
       </div>
     </details>

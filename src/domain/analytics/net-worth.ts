@@ -1,3 +1,9 @@
+import {
+  combineDistributions,
+  empiricalDistribution,
+  fixedDistribution,
+  type Distribution,
+} from "../forecasting/distribution";
 import { isConfirmed, type Ledger } from "../model";
 import { CashflowForecast, isFinancial } from "./forecast";
 import { monthEnd, previousMonths, shiftMonth } from "./calendar";
@@ -91,15 +97,14 @@ export function netWorthAnalysis(
     ),
     currentExpenses =
       -total(currentRows.filter((t) => t.amount < 0).map((t) => t.amount)) || 0;
-  let expected = worth,
-    low = worth,
-    high = worth;
+  let expected = worth;
+  const pathParts: Distribution[] = [fixedDistribution(worth)];
   const projection: {
     month: string;
     date: string;
     expected: number;
-    low: number;
-    high: number;
+    low: number | null;
+    high: number | null;
     income: number;
     expenses: number;
   }[] = [];
@@ -125,20 +130,40 @@ export function netWorthAnalysis(
       const incoming = Math.max(0, forecast.income.expected! - alreadyIncome),
         outgoing = Math.max(0, forecast.expense.expected! - alreadyExpenses);
       expected += incoming - outgoing + futureAdjustments;
-      low +=
-        Math.max(0, forecast.income.low! - alreadyIncome) -
-        Math.max(0, forecast.expense.high! - alreadyExpenses) +
-        futureAdjustments;
-      high +=
-        Math.max(0, forecast.income.high! - alreadyIncome) -
-        Math.max(0, forecast.expense.low! - alreadyExpenses) +
-        futureAdjustments;
+      const remainingDistribution = (
+        part: Distribution,
+        already: number,
+        sign: number,
+      ) => {
+        const point = sign * Math.max(0, part.expected - already);
+        return part.rangeSource === "fixed"
+          ? fixedDistribution(point)
+          : empiricalDistribution(
+              point,
+              part.rangeSource === "unavailable"
+                ? []
+                : part.scenarios.map((s) => ({
+                    month: shiftMonth(s.month, -offset),
+                    amount: sign * Math.max(0, s.amount - already),
+                  })),
+            );
+      };
+      pathParts.push(
+        remainingDistribution(forecast.income.distribution!, alreadyIncome, 1),
+        remainingDistribution(
+          forecast.expense.distribution!,
+          alreadyExpenses,
+          -1,
+        ),
+        fixedDistribution(futureAdjustments),
+      );
+      const path = combineDistributions(pathParts);
       projection.push({
         month: m,
         date: monthEnd(m),
         expected,
-        low,
-        high,
+        low: path.low,
+        high: path.high,
         income: incoming,
         expenses: outgoing,
       });

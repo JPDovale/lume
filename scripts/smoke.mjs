@@ -94,6 +94,16 @@ try {
   page = await launch();
   const after = await page.evaluate(() => window.lume.snapshot());
   expect(after).toEqual(before);
+  await expect(
+    page
+      .locator("header")
+      .getByRole("button", { name: "Importar Actual", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("aside")
+      .getByRole("button", { name: "Importar Actual", exact: true }),
+  ).toHaveCount(0);
   // Import an actual SQLite archive through the production IPC and the preview UI.
   const SQL = await initSqlJs(),
     db = new SQL.Database();

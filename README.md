@@ -62,17 +62,15 @@ O formato de origem é o [export oficial do Actual](https://actualbudget.org/doc
 
 ## Gastos e previsões
 
-Tudo é calculado localmente, sem API de IA. Os filtros permitem consultar 6, 12 ou 24 meses de histórico e projetar 3, 6 ou 12 meses. O modelo de previsão sempre usa até seis meses completos; aumentar a janela visual não muda sua base de treinamento.
+Tudo é calculado localmente, sem API de IA. Os filtros permitem consultar 6, 12 ou 24 meses de histórico e projetar 3, 6 ou 12 meses. O modelo de previsão sempre usa até 36 meses completos; aumentar a janela visual não muda sua base de treinamento.
 
 - **Comparações justas:** o mês atual é comparado até o mesmo dia do mês anterior, com ajuste para meses menores. Uma base anterior igual a zero é indicada como “Sem base”, sem inventar percentuais.
-- **Três componentes:** compromissos cadastrados, padrões mensais inferidos e gastos variáveis. O primeiro mês observado é excluído por poder estar incompleto; a previsão exige pelo menos dois meses de referência.
-- **Parte variável:** média ponderada com pesos crescentes de 1 a N, incluindo meses sem gasto como zero. A partir de quatro meses, a mediana das diferenças mensais adiciona uma tendência limitada a 25% da média ponderada.
-- **Padrões mensais:** exigem três meses consecutivos, uma ocorrência mensal, mesmo favorecido/descrição normalizada, conta e categoria, dispersão dos valores de no máximo 12% e datas dentro de seis dias. O último mês completo precisa estar presente. São hipóteses, não criam lançamentos.
-- **Sem sobreposição automática:** uma recorrência cadastrada com a mesma descrição normalizada, conta, categoria e sinal substitui o padrão histórico. Um lançamento já registrado na data da ocorrência substitui a ocorrência prevista. Padrões inferidos já registrados no mês não são somados novamente. Gastos variáveis futuros são um piso para a estimativa, não uma segunda cópia da média.
-- **Faixas:** usam um desvio padrão dos gastos variáveis e margem de 12% dos padrões inferidos ainda não registrados. São cenários de variação, não intervalos de confiança probabilísticos. Categorias sem histórico são identificadas; tendências voláteis e bases curtas também.
-- **Insights:** maiores aumentos e reduções por categoria, gastos pontuais acima de 2,5 vezes a mediana (com pelo menos cinco observações anteriores e valor mínimo de R$ 100), despesas sem categoria e expectativa do próximo mês. Cada leitura apresenta a evidência em valores.
+- **Previsões compartilhadas:** compromissos cadastrados, padrões mensais inferidos e gastos variáveis são tratados separadamente. As recorrências exatas podem informar valores mesmo sem histórico; as aproximadas usam ocorrências validadas.
+- **Modelos e validação:** seleção temporal no horizonte solicitado, com erros externos à escolha do modelo. A documentação descreve suporte mínimo, sazonalidade, intermitência e tratamento de lacunas.
+- **Incerteza:** faixas derivadas de erros comparáveis, alinhados por período para os totais. Sem amostra suficiente, a faixa fica indisponível; não há margens percentuais fixas.
+- **Insights:** comparações equivalentes, frequência, ticket e gastos atípicos com os valores que sustentam cada leitura.
 
-Não há modelo de sazonalidade anual, inflação ou rentabilidade. Recorrências recriadas com outra descrição/categoria podem continuar aparecendo na média histórica: a correspondência é explícita por identidade, não uma associação semântica por IA. Corrigir nomes/categorias melhora a separação. Saldos iniciais e transferências não são despesas nem receitas.
+Fórmulas, motivos, critérios e referências estão em [Cálculos financeiros do Lume](docs/calculos.md). Não há ajuste automático de inflação ou rentabilidade.
 
 ## Patrimônio
 
@@ -182,3 +180,51 @@ Em **Organização**, os botões de lápis renomeiam categorias e tags sem alter
 A seleção de outro destino é obrigatória quando há vínculos, inclusive em recorrências ainda sem lançamentos. Caso não exista outro item, cadastre-o antes. Apenas itens sem vínculos podem ser excluídos sem destino. Cancelar não altera dados.
 
 `node scripts/management-smoke.mjs` valida edição, renomeação, cancelamento, migração obrigatória, deduplicação de tags, interface a 360 px e persistência ao reabrir.
+
+
+## Contas e comportamento de gastos
+
+O ícone de conta no canto superior direito abre o seletor **Conta da visualização**, que filtra visão geral, gastos, patrimônio, lançamentos e recorrências. Cada tela mantém sua seleção enquanto o app está aberto. **Definir como principal** salva a conta no banco; visão geral e gastos abrem com ela nas próximas sessões. Também é possível defini-la em Organização. Sem principal, o padrão é o conjunto das contas.
+
+Em **Organização → Contas**, desmarque **Incluir nos gastos e previsões** na conta de investimentos. Ela sai dos gastos consolidados, mas permanece no patrimônio, nos lançamentos e no banco. Selecioná-la explicitamente permite analisá-la mesmo estando excluída. O filtro não muda nem apaga registros; as preferências acompanham o backup.
+
+**O que mudou no seu comportamento** compara os três últimos meses completos aos três anteriores, por categoria: média mensal, frequência, valor por lançamento e descrições que mais contribuíram. A decomposição usa `(frequência recente − anterior) × ticket anterior` e `frequência recente × (ticket recente − anterior)`; sua soma corresponde à variação do gasto médio. É uma descrição dos registros, não uma explicação causal.
+
+Os cálculos atuais estão documentados em [Cálculos financeiros](docs/calculos.md): seleção por horizonte, erros fora da amostra, tratamento de lacunas, intermitência, recorrências e cenários que preservam a relação entre categorias. A faixa pode ficar indisponível quando faltam dados; isso não é substituído por uma margem arbitrária.
+
+`node scripts/account-analytics-smoke.mjs` valida filtros, exclusão de investimentos, persistência da conta principal, evidências por categoria e layout a 360 px em Electron real com perfil temporário.
+
+
+## Calculadoras flutuantes
+
+O botão de calculadora no cabeçalho abre uma nova instância a cada clique. Arraste pelo título (ou use as setas com o controle de mover focado), minimize ou feche cada janela. As expressões são independentes e as calculadoras permanecem abertas ao navegar entre telas. Em telas estreitas, as janelas ficam contidas na área visível, com rolagem interna.
+
+O histórico dos últimos 100 cálculos é compartilhado imediatamente entre as instâncias e salvo no banco local, incluindo nos backups. Clique em uma entrada para reutilizar o resultado. Fechar a calculadora não apaga o histórico; posições e expressões abertas não são restauradas ao reiniciar.
+
+Aceita teclado/Enter, vírgula ou ponto decimal, operações básicas, negativos, parênteses e porcentagem. `%` significa dividir por 100: `200 × 15% = 30`; para acrescentar 10% a 100, use `100 × (1 + 10%)`. Não use separador de milhar. Os cálculos usam frações inteiras internamente, com arredondamento apenas no resultado exibido (até 12 casas); a expressão é limitada a 160 caracteres. Nenhum código da expressão é executado. Falhas de cálculo não entram no histórico e nenhum lançamento financeiro é criado.
+
+`node scripts/calculator-smoke.mjs` verifica múltiplas instâncias, arraste, teclado, histórico compartilhado, reutilização, erros, minimização, navegação, layout a 360 px e persistência, usando Electron real e perfil isolado.
+
+
+Gastos variáveis sem evidência de repetição são mostrados como **Sem padrão** na tabela dos próximos meses quando não há compromissos conhecidos. Não entram na soma projetada nem são redistribuídos ao longo do ano. O valor original continua no histórico e no realizado; lançamentos futuros já registrados e recorrências cadastradas continuam nas previsões. **Sem padrão** expressa falta de base para extrapolar, não certeza de gasto zero nem uma probabilidade estatística. A regra de frequência é uma heurística conservadora e pode deixar de projetar gastos trimestrais ou irregulares; cadastre os compromissos conhecidos como recorrências.
+
+
+## Coerência entre categorias, total e entradas
+
+**Cada categoria, com contexto** mostra estimativas centrais, a participação de cada categoria no total e a soma das categorias no rodapé. Entradas, gastos e diferença previstos usam a mesma conta e o mesmo mês. Um limite superior de cenário não é apresentado como valor provável na tabela: os cenários ficam no detalhe, comparados com o total do mesmo cenário. Categorias voláteis aparecem como **Baixa previsibilidade** e o detalhe explica que não há faixa provável confiável. A renda contextualiza a previsão, mas não limita gastos já conhecidos nem impõe um teto artificial às categorias.
+
+Para evitar contar duas vezes uma receita/despesa recorrente importada sem identificação, a previsão pode conciliar registros com descrição exata **Lançamento importado** com uma recorrência mensal da mesma conta, categoria e sinal. São exigidos três meses completos consecutivos, cada um com um único pagamento compatível (valor a até 15% do compromisso e dia a até 10 dias do vencimento). Regras concorrentes bloqueiam a associação. Meses antigos com um único pagamento nessa posição podem representar valores anteriores do mesmo compromisso; se houver vários, só o candidato único compatível é utilizado. No mês atual e em registros futuros, o valor compatível continua obrigatório. Outras descrições, contas, categorias, transferências e pendências não entram nessa inferência.
+
+Essa correspondência é **estimada**, exibida como tal no contexto de entradas e usada somente no cálculo das previsões. Não muda vínculos, valores ou datas dos lançamentos, nem os transforma em parcelas. Ela evita somar o histórico compatível à recorrência, mas não elimina fontes adicionais identificadas. Nomes claros nos registros continuam sendo preferíveis.
+
+`node scripts/forecast-context-smoke.mjs` verifica reconciliação de receitas, tabela de estimativas centrais, total consolidado, explicação dos cenários e responsividade em um perfil fictício isolado.
+
+## Planejamento mensal e métodos financeiros
+
+**Planejamento** é sempre para o próximo mês. Defina o percentual de sobra e ajuste as reservas por categoria (slider de 0 a 100% da previsão): a prévia recalcula automaticamente. **Salvar planejamento** preserva a versão que será comparada ao realizado. Os fechamentos estão em **Resultados dos planos**, com detalhes e revisões após validações tardias.
+
+As telas compartilham o motor `cashflow-v2`, com precedência de recorrências, treinamento confirmado, validação temporal no horizonte solicitado e cenários conjuntos somente quando há evidência suficiente. Percentuais de reserva alteram limites, sem alterar a previsão de comportamento.
+
+A descrição atual e completa, incluindo fórmulas, parâmetros, motivos, limitações, referências científicas indexadas e mapa do código, está em **[Cálculos financeiros do Lume](docs/calculos.md)**. Essa documentação substitui as descrições anteriores do motor nesta página, incluindo margens percentuais fixas e ajustes baseados na razão realizado/limite.
+
+`node scripts/planning-smoke.mjs` verifica próximo mês fixo, recálculo automático, sliders percentuais, inclusão/remoção, persistência, resultados separados, responsividade e separadores mensais. `node scripts/forecast-benchmark.mjs` reproduz as comparações sintéticas em [forecast-benchmark.json](docs/forecast-benchmark.json); elas não são garantia de acurácia sobre dados reais.

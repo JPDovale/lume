@@ -1,3 +1,5 @@
+import type { MonthlyPlan, PlanResult } from "./planning-model";
+import type { Calculation } from "./calculator";
 import { z } from "zod";
 export const dateSchema = z
   .string()
@@ -64,7 +66,16 @@ export const isConfirmed = (t: Pick<Transaction, "validationStatus">) =>
 export type Named = z.infer<typeof namedSchema>;
 export type Transaction = z.infer<typeof transactionSchema>;
 export type Recurrence = z.infer<typeof recurrenceSchema>;
+export const settingsSchema = z.object({
+  primaryAccountId: z.string().min(1).nullable(),
+  excludedSpendingAccountIds: z.array(z.string().min(1)),
+});
+export type LedgerSettings = z.infer<typeof settingsSchema>;
 export type Ledger = {
+  monthlyPlans?: MonthlyPlan[];
+  planResults?: PlanResult[];
+  calculatorHistory?: Calculation[];
+  settings?: LedgerSettings;
   accounts: Named[];
   categories: Named[];
   tags: Named[];

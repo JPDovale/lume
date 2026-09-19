@@ -1,5 +1,8 @@
+import { closeExpiredPlans } from "../domain/planning";
+import { percentOf } from "../domain/planning-allocation";
 import {
   namedSchema,
+  settingsSchema,
   transactionSchema,
   recurrenceSchema,
   type Ledger,
@@ -17,6 +20,24 @@ export class LedgerService {
     this.repository = repository;
     this.clock = clock;
   }
+  saveSettings(input: unknown) {
+    const settings = settingsSchema.parse(input);
+    const state = this.repository.read();
+    const ids = new Set(state.accounts.map((a) => a.id));
+    if (
+      (settings.primaryAccountId && !ids.has(settings.primaryAccountId)) ||
+      settings.excludedSpendingAccountIds.some((id) => !ids.has(id))
+    )
+      throw new Error("Conta não encontrada.");
+    state.settings = {
+      ...settings,
+      excludedSpendingAccountIds: [
+        ...new Set(settings.excludedSpendingAccountIds),
+      ],
+    };
+    this.repository.save(state);
+    return this.snapshot();
+  }
   snapshot(): Ledger {
     const state = this.repository.read();
     const linked = state.transactions.map((t) =>
@@ -30,10 +51,9 @@ export class LedgerService {
       state.transactions,
       this.clock.today(),
     );
-    if (due.length || migrated) {
-      state.transactions.push(...due);
-      this.repository.save(state);
-    }
+    state.transactions.push(...due);
+    const closed = closeExpiredPlans(state, this.clock.today());
+    if (due.length || migrated || closed) this.repository.save(state);
     return state;
   }
   saveTransaction(input: unknown) {
@@ -137,7 +157,14 @@ export class LedgerService {
         ? entry.categoryId === id
         : entry.tagIds.includes(id);
     const hasLinks =
-      state.transactions.some(linked) || state.recurrences.some(linked);
+      state.transactions.some(linked) ||
+      state.recurrences.some(linked) ||
+      (kind === "categories" &&
+        (state.monthlyPlans ?? []).some(
+          (p) =>
+            p.config.month >= this.clock.today().slice(0, 7) &&
+            p.config.categories.some((c) => c.categoryId === id),
+        ));
     if (hasLinks && !replacementId)
       throw new Error("Selecione um destino para os registros vinculados.");
     if (
@@ -165,6 +192,55 @@ export class LedgerService {
     });
     state.transactions = state.transactions.map(move);
     state.recurrences = state.recurrences.map(move);
+    if (kind === "categories" && replacementId) {
+      for (const plan of state.monthlyPlans ?? []) {
+        if (plan.config.month < this.clock.today().slice(0, 7)) continue;
+        const source = plan.allocations.find((c) => c.categoryId === id);
+        if (!source) continue;
+        for (const allocation of plan.allocations) {
+          allocation.reserveBps ??= 10000;
+          allocation.requested ??= percentOf(
+            allocation.baseline,
+            allocation.reserveBps,
+          );
+        }
+        const destination = plan.allocations.find(
+          (c) => c.categoryId === replacementId,
+        );
+        if (destination) {
+          destination.allocated += source.allocated;
+          destination.baseline += source.baseline;
+          destination.committed += source.committed;
+          destination.requested += source.requested;
+          destination.reserveBps = destination.baseline
+            ? Math.min(
+                10000,
+                Math.round(
+                  (destination.requested / destination.baseline) * 10000,
+                ),
+              )
+            : 10000;
+          destination.shareBps = plan.income
+            ? Math.round((destination.allocated / plan.income) * 10000)
+            : 0;
+          destination.seeded = destination.baseline === 0;
+          destination.learnedMonths = 0;
+          destination.historicalOverruns = 0;
+          plan.allocations = plan.allocations.filter((c) => c !== source);
+        } else {
+          source.categoryId = replacementId;
+          source.name = state.categories.find(
+            (c) => c.id === replacementId,
+          )!.name;
+        }
+        plan.config.categories = plan.allocations.map((c) => ({
+          categoryId: c.categoryId,
+          reserveBps: c.reserveBps,
+        }));
+        delete plan.forecast; // Reclassification changes the forecasting target; do not train on a mismatched snapshot.
+        plan.updatedAt = new Date().toISOString();
+      }
+    }
     state[kind] = state[kind].filter((entity) => entity.id !== id);
     this.repository.save(state);
     return this.snapshot();

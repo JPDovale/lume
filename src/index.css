@@ -211,21 +211,6 @@ button {
   margin-top: auto;
   padding-top: 36px;
 }
-.import-box {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 17px;
-}
-.import-box h3 {
-  font-size: 13px;
-  line-height: 1.6;
-}
-.import-box p {
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--muted-foreground);
-  margin-top: 8px;
-}
 .main-content {
   width: 100%;
   padding: 42px 40px 26px;

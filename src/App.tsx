@@ -1,3 +1,9 @@
+import { PlanResults } from "@/features/planning/plan-results";
+import { sameAccounts } from "@/domain/planning-model";
+import { PlanningDashboard } from "@/features/planning/planning-dashboard";
+import { CalculatorWorkspace } from "@/features/calculator-workspace";
+import { accountScope } from "@/domain/account-scope";
+import { AccountFilter } from "@/features/account-filter";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
@@ -13,6 +19,8 @@ import {
   Check,
   Menu,
   Landmark,
+  Target,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,9 +47,17 @@ const navigation = [
   { id: "recurrences", label: "Recorrências", icon: Repeat2 },
   { id: "organization", label: "Organização", icon: Shapes },
   { id: "reports", label: "Gastos e previsões", icon: ChartNoAxesCombined },
+  { id: "planning", label: "Planejamento", icon: Target },
+  { id: "plan-results", label: "Resultados dos planos", icon: History },
   { id: "wealth", label: "Patrimônio", icon: Landmark },
 ];
 export default function App() {
+  const [accountFilters, setAccountFilters] = useState<Record<string, string>>({
+    overview: "primary",
+    reports: "primary",
+    planning: "primary",
+    "plan-results": "primary",
+  });
   const [ledger, setLedger] = useState<Ledger | null>(null),
     [page, setPage] = useState("overview"),
     [recurrenceFilter, setRecurrenceFilter] = useState<string | null>(null),
@@ -107,6 +123,9 @@ export default function App() {
         </div>
       </div>
     );
+  const accountSelection = accountFilters[page] ?? "all";
+  const scopedLedger = accountScope(ledger, accountSelection);
+  const spendingLedger = accountScope(ledger, accountSelection, true);
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -136,27 +155,6 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="import-box">
-            <Download size={20} className="text-primary mb-3" />
-            <h3>
-              Um novo começo.
-              <br />
-              Com toda a sua história.
-            </h3>
-            <p>Traga suas contas e lançamentos do Actual Budget.</p>
-            <Button
-              variant="outline"
-              className="w-full mt-4"
-              disabled={busy}
-              onClick={() =>
-                void run(async () =>
-                  setPreview(await window.lume.previewImport()),
-                )
-              }
-            >
-              Importar Actual <ArrowUpRight size={14} />
-            </Button>
-          </div>
           <div className="flex gap-2 items-center text-xs text-muted-foreground mt-6">
             <HardDrive size={14} />
             <span>Local. Pessoal. Seu.</span>
@@ -178,7 +176,7 @@ export default function App() {
             lume<span className="text-primary">.</span>
           </span>
         </div>
-        <header className="page-header flex items-start justify-between gap-4 mb-8">
+        <header className="page-header flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
             <p className="text-xs uppercase tracking-[.18em] text-muted-foreground mb-3">
               MENOS RUÍDO, MAIS CLAREZA
@@ -191,16 +189,61 @@ export default function App() {
                 ? "Seu presente em números. Seu futuro em perspectiva."
                 : page === "transactions"
                   ? "Cada movimento, no seu lugar."
-                  : page === "recurrences"
-                    ? "Compromissos que se repetem, sem retrabalho."
-                    : page === "wealth"
-                      ? "Acompanhe o que você construiu e os caminhos à frente."
-                      : page === "organization"
-                        ? "Uma estrutura que faz sentido para você."
-                        : "Entenda seus hábitos e antecipe os próximos meses."}
+                  : page === "plan-results"
+                    ? "Compare o que foi planejado com os resultados de cada mês."
+                    : page === "planning"
+                      ? "Prepare o próximo mês: defina a sobra e distribua o orçamento."
+                      : page === "recurrences"
+                        ? "Compromissos que se repetem, sem retrabalho."
+                        : page === "wealth"
+                          ? "Acompanhe o que você construiu e os caminhos à frente."
+                          : page === "organization"
+                            ? "Uma estrutura que faz sentido para você."
+                            : "Entenda seus hábitos e antecipe os próximos meses."}
             </p>
           </div>
-          <div className="header-actions flex gap-2 mt-5">
+          <div className="header-actions flex flex-wrap justify-end gap-2 mt-5">
+            {ledger.accounts.length > 0 && page !== "organization" && (
+              <AccountFilter
+                ledger={ledger}
+                value={accountSelection}
+                spending={
+                  page === "overview" ||
+                  page === "reports" ||
+                  page === "planning" ||
+                  page === "plan-results"
+                }
+                onChange={(value) =>
+                  setAccountFilters((prev) => ({ ...prev, [page]: value }))
+                }
+                onPrimary={(id) =>
+                  void run(async () =>
+                    setLedger(
+                      await window.lume.saveSettings({
+                        primaryAccountId: id,
+                        excludedSpendingAccountIds:
+                          ledger.settings?.excludedSpendingAccountIds ?? [],
+                      }),
+                    ),
+                  )
+                }
+              />
+            )}
+            <CalculatorWorkspace />
+            <Button
+              variant="outline"
+              size="icon"
+              title="Importar Actual"
+              aria-label="Importar Actual"
+              disabled={busy}
+              onClick={() =>
+                void run(async () =>
+                  setPreview(await window.lume.previewImport()),
+                )
+              }
+            >
+              <Download size={16} />
+            </Button>
             <Button
               variant="outline"
               size="icon"
@@ -255,17 +298,47 @@ export default function App() {
           </Card>
         )}
         {page === "overview" && (
-          <Dashboard ledger={ledger} onNavigate={setPage} />
+          <Dashboard
+            ledger={scopedLedger}
+            spendingLedger={spendingLedger}
+            onNavigate={setPage}
+          />
         )}
-        {page === "reports" && <SpendingDashboard ledger={ledger} />}
-        {page === "wealth" && <WealthDashboard ledger={ledger} />}
+        {page === "reports" && (
+          <SpendingDashboard key={accountSelection} ledger={spendingLedger} />
+        )}
+        {page === "wealth" && <WealthDashboard ledger={scopedLedger} />}
+        {page === "planning" && (
+          <PlanningDashboard
+            ledger={ledger}
+            accountIds={spendingLedger.accounts.map((a) => a.id)}
+            onSave={async (config) =>
+              setLedger(await window.lume.saveMonthlyPlan(config))
+            }
+          />
+        )}
+        {page === "plan-results" && (
+          <PlanResults
+            results={(ledger.planResults ?? []).filter((r) =>
+              sameAccounts(
+                r.plan.config.accountIds,
+                spendingLedger.accounts.map((a) => a.id),
+              ),
+            )}
+          />
+        )}
         {page === "transactions" && (
           <Transactions
-            ledger={ledger}
+            key={accountSelection}
+            ledger={scopedLedger}
             recurrenceFilter={recurrenceFilter}
             onRecurrenceFilter={setRecurrenceFilter}
             onOpenRecurrence={(id) => {
               setSelectedRecurrence(id);
+              setAccountFilters((prev) => ({
+                ...prev,
+                recurrences: accountSelection,
+              }));
               setPage("recurrences");
             }}
             onEdit={(t) => {
@@ -279,7 +352,7 @@ export default function App() {
         )}
         {page === "recurrences" && (
           <Recurrences
-            ledger={ledger}
+            ledger={scopedLedger}
             busy={busy}
             selectedId={selectedRecurrence}
             onCreate={() => add(true)}
@@ -297,6 +370,10 @@ export default function App() {
             }
             onTransactions={(id) => {
               setRecurrenceFilter(id);
+              setAccountFilters((prev) => ({
+                ...prev,
+                transactions: accountSelection,
+              }));
               setPage("transactions");
             }}
           />
@@ -328,19 +405,6 @@ export default function App() {
               </Button>
             ))}
           </nav>
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => {
-              setMenuOpen(false);
-              void run(async () =>
-                setPreview(await window.lume.previewImport()),
-              );
-            }}
-          >
-            <Download size={16} />
-            Importar Actual
-          </Button>
         </DialogContent>
       </Dialog>
       <Dialog

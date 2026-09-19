@@ -9,9 +9,11 @@ import { maybeMoney, palette } from "./analytics/chart-format";
 import { WealthChart } from "./analytics/wealth-chart";
 export function Dashboard({
   ledger,
+  spendingLedger = ledger,
   onNavigate,
 }: {
   ledger: Ledger;
+  spendingLedger?: Ledger;
   onNavigate: (page: string) => void;
 }) {
   const today = localToday();
@@ -20,8 +22,8 @@ export function Dashboard({
     [ledger, today],
   );
   const spending = useMemo(
-    () => spendingAnalysis(ledger, today),
-    [ledger, today],
+    () => spendingAnalysis(spendingLedger, today),
+    [spendingLedger, today],
   );
   return (
     <div className="space-y-6">

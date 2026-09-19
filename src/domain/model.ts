@@ -28,19 +28,39 @@ export const transactionSchema = z.object({
   transfer: z.boolean().default(false),
   openingBalance: z.boolean().default(false),
   recurrenceId: z.string().nullable().default(null),
+  recurrenceDate: dateSchema.optional(),
+  installmentNumber: z.number().int().positive().optional(),
+  installmentTotal: z.number().int().positive().optional(),
+  validationStatus: z.enum(["pending", "confirmed"]).optional(),
 });
 export const recurrenceSchema = transactionSchema
-  .omit({ date: true, transfer: true, openingBalance: true })
+  .omit({
+    date: true,
+    transfer: true,
+    openingBalance: true,
+    recurrenceDate: true,
+    installmentNumber: true,
+    installmentTotal: true,
+    validationStatus: true,
+  })
   .extend({
     startDate: dateSchema,
     endDate: dateSchema.nullable(),
     frequency: z.enum(["weekly", "monthly", "yearly"]),
     active: z.boolean(),
+    amountMode: z.enum(["exact", "approximate"]).optional(),
+    installmentCount: z.number().int().min(1).max(1200).nullable().optional(),
   })
   .refine(
     (v) => !v.endDate || v.endDate >= v.startDate,
     "Fim anterior ao início",
+  )
+  .refine(
+    (v) => !(v.endDate && v.installmentCount),
+    "Escolha uma data final ou um número de parcelas.",
   );
+export const isConfirmed = (t: Pick<Transaction, "validationStatus">) =>
+  t.validationStatus !== "pending";
 export type Named = z.infer<typeof namedSchema>;
 export type Transaction = z.infer<typeof transactionSchema>;
 export type Recurrence = z.infer<typeof recurrenceSchema>;

@@ -1,3 +1,4 @@
+import { isConfirmed } from "../model";
 import type { Ledger, Transaction, Recurrence } from "../model";
 import { previousMonths, shiftMonth } from "./calendar";
 import { mean, median, deviation } from "./statistics";
@@ -37,6 +38,7 @@ export function detectMonthlyPatterns(
   const groups = new Map<string, Transaction[]>();
   for (const t of ledger.transactions) {
     if (
+      !isConfirmed(t) ||
       t.transfer ||
       t.openingBalance ||
       t.recurrenceId ||

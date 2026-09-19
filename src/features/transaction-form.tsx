@@ -1,3 +1,4 @@
+import { installmentLabel } from "@/domain/recurrence";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,10 @@ export function TransactionForm({
   initial?: Transaction;
   onSave: (value: Transaction | Recurrence) => Promise<void>;
 }) {
+  const [ending, setEnding] = useState("none");
+  const [amountMode, setAmountMode] = useState("exact");
+  const pending = initial?.validationStatus === "pending";
+  const origin = ledger.recurrences.find((r) => r.id === initial?.recurrenceId);
   const [tags, setTags] = useState(initial?.tagIds ?? []),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -34,6 +39,9 @@ export function TransactionForm({
     setError("");
     setBusy(true);
     const f = new FormData(e.currentTarget);
+    const validating =
+      (e.nativeEvent.submitter as HTMLButtonElement | null)?.value ===
+      "confirm";
     try {
       const base = {
         id: initial?.id ?? crypto.randomUUID(),
@@ -53,13 +61,23 @@ export function TransactionForm({
           ? {
               ...base,
               startDate: date,
-              endDate: String(f.get("endDate")) || null,
+              endDate:
+                ending === "date" ? String(f.get("endDate")) || null : null,
+              installmentCount:
+                ending === "count" ? Number(f.get("installmentCount")) : null,
+              amountMode: amountMode as Recurrence["amountMode"],
               frequency: String(f.get("frequency")) as Recurrence["frequency"],
               active: true,
             }
           : {
               ...base,
               date,
+              recurrenceDate: initial?.recurrenceDate,
+              installmentNumber: initial?.installmentNumber,
+              installmentTotal: initial?.installmentTotal,
+              validationStatus: validating
+                ? "confirmed"
+                : (initial?.validationStatus ?? "confirmed"),
               transfer: initial?.transfer ?? false,
               openingBalance: initial?.openingBalance ?? false,
             },
@@ -78,6 +96,24 @@ export function TransactionForm({
     );
   return (
     <form onSubmit={submit} className="space-y-5">
+      {origin && (
+        <div className="rounded-lg border border-border p-3 text-sm">
+          <p>
+            Recorrência: <strong>{origin.description}</strong> ·{" "}
+            {installmentLabel(initial!)}
+          </p>
+          <p className="text-muted-foreground text-xs mt-1">
+            As alterações afetam somente este lançamento. O vínculo e a parcela
+            são preservados.
+          </p>
+        </div>
+      )}
+      {pending && (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-300">
+          Valor aproximado. Confira o valor real e clique em Validar lançamento
+          para incluí-lo no realizado.
+        </p>
+      )}
       <div className="field">
         <Label htmlFor="description">Descrição</Label>
         <Input
@@ -89,6 +125,26 @@ export function TransactionForm({
           maxLength={300}
         />
       </div>
+      {recurring && (
+        <div className="field">
+          <Label htmlFor="amountMode">Precisão do valor</Label>
+          <NativeSelect
+            id="amountMode"
+            value={amountMode}
+            onChange={(e) => setAmountMode(e.target.value)}
+          >
+            <NativeSelectOption value="exact">Exatamente</NativeSelectOption>
+            <NativeSelectOption value="approximate">
+              Aproximadamente
+            </NativeSelectOption>
+          </NativeSelect>
+          <p className="text-xs text-muted-foreground">
+            {amountMode === "approximate"
+              ? "Cada ocorrência aguardará validação do valor nos lançamentos."
+              : "Cada ocorrência será registrada com o valor informado, sem validação pendente."}
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div className="field">
           <Label htmlFor="amount">Valor (R$)</Label>
@@ -150,7 +206,7 @@ export function TransactionForm({
           </NativeSelect>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className={recurring ? "grid sm:grid-cols-2 gap-4" : "grid gap-4"}>
         <div className="field">
           <Label htmlFor="date">
             {recurring ? "Primeiro lançamento" : "Data"}
@@ -181,9 +237,45 @@ export function TransactionForm({
       {recurring && (
         <>
           <div className="field">
-            <Label htmlFor="endDate">Termina em (opcional)</Label>
-            <Input id="endDate" type="date" name="endDate" />
+            <Label htmlFor="ending">Término</Label>
+            <NativeSelect
+              id="ending"
+              value={ending}
+              onChange={(e) => setEnding(e.target.value)}
+            >
+              <NativeSelectOption value="none">
+                Sem fim definido
+              </NativeSelectOption>
+              <NativeSelectOption value="date">Em uma data</NativeSelectOption>
+              <NativeSelectOption value="count">
+                Por número de parcelas
+              </NativeSelectOption>
+            </NativeSelect>
           </div>
+          {ending === "date" && (
+            <div className="field">
+              <Label htmlFor="endDate">Termina em</Label>
+              <Input id="endDate" type="date" name="endDate" required />
+            </div>
+          )}
+          {ending === "count" && (
+            <div className="field">
+              <Label htmlFor="installmentCount">Número de parcelas</Label>
+              <Input
+                id="installmentCount"
+                type="number"
+                name="installmentCount"
+                min={1}
+                max={1200}
+                step={1}
+                defaultValue={12}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Inclui o primeiro lançamento. O valor informado é por parcela.
+              </p>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             Lançamentos até hoje serão registrados ao salvar. Os próximos serão
             registrados automaticamente quando o app estiver aberto.
@@ -224,7 +316,23 @@ export function TransactionForm({
           {error}
         </p>
       )}
-      <Button type="submit" disabled={busy} className="w-full">
+      {pending && (
+        <Button
+          type="submit"
+          value="confirm"
+          disabled={busy}
+          className="w-full"
+        >
+          Validar lançamento
+        </Button>
+      )}
+      <Button
+        type="submit"
+        value="save"
+        variant={pending ? "outline" : "default"}
+        disabled={busy}
+        className="w-full"
+      >
         {busy
           ? "Salvando…"
           : recurring

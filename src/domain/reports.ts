@@ -1,4 +1,4 @@
-import type { Ledger } from "./model";
+import { isConfirmed, type Ledger } from "./model";
 import { CashflowForecast, isFinancial } from "./analytics/forecast";
 import { shiftMonth } from "./analytics/calendar";
 import { total } from "./analytics/statistics";
@@ -18,7 +18,9 @@ export function report(ledger: Ledger, today: string) {
     income: total(current.filter((t) => t.amount > 0).map((t) => t.amount)),
     expenses: total(current.filter((t) => t.amount < 0).map((t) => -t.amount)),
     balance: total(
-      ledger.transactions.filter((t) => t.date <= today).map((t) => t.amount),
+      ledger.transactions
+        .filter((t) => t.date <= today && isConfirmed(t))
+        .map((t) => t.amount),
     ),
   };
 }

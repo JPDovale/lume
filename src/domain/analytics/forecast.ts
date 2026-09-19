@@ -1,4 +1,4 @@
-import type { Ledger, Transaction } from "../model";
+import { isConfirmed, type Ledger, type Transaction } from "../model";
 import { occurrences } from "../recurrence";
 import { monthEnd, monthsBetween, previousMonths } from "./calendar";
 import {
@@ -10,7 +10,8 @@ import { estimateSeries, total } from "./statistics";
 export const UNCATEGORIZED = "__uncategorized__";
 export const categoryKey = (t: Pick<Transaction, "categoryId">) =>
   t.categoryId ?? UNCATEGORIZED;
-export const isFinancial = (t: Transaction) => !t.transfer && !t.openingBalance;
+export const isFinancial = (t: Transaction) =>
+  !t.transfer && !t.openingBalance && isConfirmed(t);
 export type ForecastSlice = {
   id: string;
   name: string;
@@ -57,12 +58,13 @@ export class CashflowForecast {
     this.ruleKeys = new Set(ledger.recurrences.map(merchantKey));
     const samples = new Set(this.sampleMonths);
     for (const t of ledger.transactions) {
-      if (!isFinancial(t)) continue;
+      if (t.transfer || t.openingBalance) continue;
       const month = t.date.slice(0, 7);
       const rows = this.rowsByMonth.get(month) ?? [];
       rows.push(t);
       this.rowsByMonth.set(month, rows);
       if (
+        !isConfirmed(t) ||
         !samples.has(month) ||
         this.isNative(t) ||
         this.patternKeys.has(merchantKey(t))
@@ -94,12 +96,14 @@ export class CashflowForecast {
     );
     // Existing postings replace generated occurrences, including an imported posting with the same identity/date.
     const actualSlots = new Set(
-      existing.map((t) => `${merchantKey(t)}:${t.date}`),
+      existing
+        .filter((t) => !t.recurrenceId)
+        .map((t) => `${merchantKey(t)}:${t.date}`),
     );
     const recurrenceSlots = new Set(
-      existing
+      this.ledger.transactions
         .filter((t) => t.recurrenceId)
-        .map((t) => `${t.recurrenceId}:${t.date}`),
+        .map((t) => `${t.recurrenceId}:${t.recurrenceDate ?? t.date}`),
     );
     const pending = scheduled.filter(
       (t) =>
@@ -127,8 +131,11 @@ export class CashflowForecast {
         history,
         Math.max(1, monthsBetween(this.anchorMonth, month) + 1),
       );
-      const knownRows = existing.filter(matches),
-        pendingRows = pending.filter(matches);
+      const knownRows = existing.filter((t) => matches(t) && isConfirmed(t)),
+        pendingRows = [
+          ...pending,
+          ...existing.filter((t) => !isConfirmed(t)),
+        ].filter(matches);
       const known = total(knownRows.map((t) => Math.abs(t.amount)));
       const native =
         total(

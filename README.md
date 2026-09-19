@@ -37,7 +37,7 @@ npm run package
 
 - Importação de ZIP exportado pelo Actual Budget, ou `db.sqlite`, com prévia e confirmação. Importa contas, categorias, lançamentos e hashtags presentes nas notas. IDs preservados permitem repetir a importação sem duplicar registros.
 - Lançamentos individuais, edição, categorização e múltiplas tags. Busca e filtros por mês, categoria e tag; paginação de 30 registros.
-- Recorrências semanais, mensais e anuais, com início, fim opcional e pausa. O dia 31 é ajustado ao último dia de meses menores e volta ao dia original no mês seguinte. As ocorrências vencidas são geradas na abertura e a cada minuto enquanto o app estiver aberto.
+- Recorrências semanais, mensais e anuais, com início, término por data ou quantidade de parcelas, valor exato/aproximado e pausa. O dia 31 é ajustado ao último dia de meses menores e volta ao dia original no mês seguinte. As ocorrências vencidas são geradas na abertura e a cada minuto enquanto o app estiver aberto.
 - Cadastro de contas, categorias e tags.
 - Painel **Gastos e previsões**: comparações por categoria em intervalos equivalentes, maiores gastos, variações, padrões mensais e projeções de 3, 6 ou 12 meses.
 - Painel **Patrimônio**: evolução líquida, ativos/dívidas, resultado de caixa mensal, reconciliação de saldos, composição por conta e cenários futuros.
@@ -135,12 +135,12 @@ O vetor original está em [`public/icon.svg`](public/icon.svg). `npm run icons` 
 
 ```sh
 npm run package:linux  # release/Lume-linux-x86_64.AppImage
-npm run package:win    # release/Lume-Setup-0.2.1-x64.exe (executar no Windows)
+npm run package:win    # release/Lume-Setup-0.3.0-x64.exe (executar no Windows)
 ```
 
 O GitHub Actions testa e empacota em runners nativos Linux e Windows a cada push em `main`, pull request e execução manual. Tags `v*` publicam os dois arquivos e `SHA256SUMS.txt` em Releases. Os pacotes são x64; o instalador Windows ainda não possui assinatura de código. Não há atualização automática dentro do Lume.
 
-Para publicar uma versão, atualize `package.json` e `package-lock.json`, faça commit e envie a tag correspondente (por exemplo, `v0.2.2`).
+Para publicar uma versão, atualize `package.json` e `package-lock.json`, faça commit e envie a tag correspondente (por exemplo, `v0.3.1`).
 
 ### Linux com Gear Lever
 
@@ -153,3 +153,21 @@ xdg-mime default it.mijorus.gearlever.desktop application/vnd.appimage
 ```
 
 O caminho integrado depende da pasta configurada no Gear Lever; confira com `flatpak run it.mijorus.gearlever --list-installed`. O lançador aparece no menu de aplicativos. As atualizações são gerenciadas pelo Gear Lever a partir das Releases do GitHub e preservam o banco em `~/.config/lume`.
+
+
+## Recorrências, parcelas e validação
+
+- **Exatamente:** cada vencimento entra confirmado, pelo valor por parcela informado.
+- **Aproximadamente:** cada vencimento entra pendente. Em **Lançamentos → Pendentes de validação → Validar**, confira o valor real e clique em **Validar lançamento**. **Salvar alterações** apenas edita e mantém a pendência.
+- Pendências participam das previsões, mas ficam fora dos gastos realizados, saldos das contas e patrimônio até serem validadas.
+- Escolha **Término → Por número de parcelas** (1 a 1.200, incluindo a primeira) ou **Em uma data** (inclusive). A geração termina nesse limite. Sem término, a recorrência continua indefinidamente.
+- A tabela de recorrências mostra lançadas/total e pendências. Lançamentos com fim exibem `1/12`, `2/12` etc. O nome da recorrência abre sua origem; **Ver lançamentos** aplica o filtro correspondente.
+- Editar data, descrição ou valor de uma parcela não altera a recorrência nem sua posição original. O identificador, a data de origem e o vínculo são preservados para evitar duplicações e manter as previsões corretas.
+- Registros de versões anteriores recebem vínculo/numeração automaticamente quando a origem é identificável; seus valores são preservados e tratados como confirmados. Alterar uma regra não reabre validações anteriores. Não é possível reduzir o término para excluir parcelas já geradas.
+
+Validação do fluxo completo em Electron real, com perfil temporário separado:
+
+```sh
+npm run build
+node scripts/recurrence-smoke.mjs
+```

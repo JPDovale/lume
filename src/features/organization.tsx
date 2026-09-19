@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { money, localToday, type Ledger } from "@/domain/model";
+import { isConfirmed, money, localToday, type Ledger } from "@/domain/model";
 export function Organization({
   ledger,
   onChange,
@@ -100,7 +100,9 @@ export function Organization({
                           ledger.transactions
                             .filter(
                               (t) =>
-                                t.accountId === v.id && t.date <= localToday(),
+                                t.accountId === v.id &&
+                                t.date <= localToday() &&
+                                isConfirmed(t),
                             )
                             .reduce((s, t) => s + t.amount, 0),
                         )}

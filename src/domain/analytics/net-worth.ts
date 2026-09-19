@@ -1,4 +1,4 @@
-import type { Ledger } from "../model";
+import { isConfirmed, type Ledger } from "../model";
 import { CashflowForecast, isFinancial } from "./forecast";
 import { monthEnd, previousMonths, shiftMonth } from "./calendar";
 import { total } from "./statistics";
@@ -10,7 +10,7 @@ export function netWorthAnalysis(
 ) {
   const month = today.slice(0, 7);
   const recorded = [...ledger.transactions]
-    .filter((t) => t.date <= today)
+    .filter((t) => t.date <= today && isConfirmed(t))
     .sort((a, b) => a.date.localeCompare(b.date));
   const firstDate = recorded[0]?.date;
   const accounts = ledger.accounts.map((a) => ({
@@ -114,7 +114,11 @@ export function netWorthAnalysis(
       const futureAdjustments = total(
         ledger.transactions
           .filter(
-            (t) => t.date > today && t.date.startsWith(m) && !isFinancial(t),
+            (t) =>
+              t.date > today &&
+              t.date.startsWith(m) &&
+              (t.transfer || t.openingBalance) &&
+              isConfirmed(t),
           )
           .map((t) => t.amount),
       );

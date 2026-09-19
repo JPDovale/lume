@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -27,15 +26,11 @@ import {
 import { SpendingDashboard } from "@/features/analytics/spending-dashboard";
 import { WealthDashboard } from "@/features/analytics/wealth-dashboard";
 import { Dashboard } from "@/features/dashboard";
+import { Recurrences } from "@/features/recurrences";
 import { Transactions } from "@/features/transactions";
 import { TransactionForm } from "@/features/transaction-form";
 import { Organization } from "@/features/organization";
-import {
-  money,
-  type Ledger,
-  type Transaction,
-  type Recurrence,
-} from "@/domain/model";
+import { type Ledger, type Transaction, type Recurrence } from "@/domain/model";
 import type { ImportPreview } from "@/application/ports";
 import "@/application/api";
 const navigation = [
@@ -49,6 +44,8 @@ const navigation = [
 export default function App() {
   const [ledger, setLedger] = useState<Ledger | null>(null),
     [page, setPage] = useState("overview"),
+    [recurrenceFilter, setRecurrenceFilter] = useState<string | null>(null),
+    [selectedRecurrence, setSelectedRecurrence] = useState<string | null>(null),
     [menuOpen, setMenuOpen] = useState(false),
     [modal, setModal] = useState<"transaction" | "recurrence" | null>(null),
     [editing, setEditing] = useState<Transaction | undefined>(),
@@ -263,6 +260,12 @@ export default function App() {
         {page === "transactions" && (
           <Transactions
             ledger={ledger}
+            recurrenceFilter={recurrenceFilter}
+            onRecurrenceFilter={setRecurrenceFilter}
+            onOpenRecurrence={(id) => {
+              setSelectedRecurrence(id);
+              setPage("recurrences");
+            }}
             onEdit={(t) => {
               setEditing(t);
               setModal("transaction");
@@ -273,79 +276,23 @@ export default function App() {
           <Organization ledger={ledger} onChange={setLedger} />
         )}
         {page === "recurrences" && (
-          <div className="space-y-4">
-            {!ledger.recurrences.length ? (
-              <Card>
-                <CardContent className="p-16 text-center">
-                  <Repeat2 className="mx-auto text-primary mb-5" size={32} />
-                  <h2 className="text-xl">Deixe o calendário cuidar disso</h2>
-                  <p className="text-muted-foreground text-sm mt-3 mb-6">
-                    Aluguel, assinaturas, salário. Cadastre uma vez e acompanhe
-                    aqui.
-                  </p>
-                  <Button onClick={() => add(true)}>
-                    Criar primeira recorrência
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              ledger.recurrences.map((r) => (
-                <Card key={r.id}>
-                  <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-xl p-3 bg-secondary">
-                        <Repeat2 className="text-primary" size={20} />
-                      </div>
-                      <div>
-                        <h2 className="font-medium">{r.description}</h2>
-                        <p className="text-muted-foreground text-sm mt-1">
-                          {
-                            {
-                              weekly: "Semanal",
-                              monthly: "Mensal",
-                              yearly: "Anual",
-                            }[r.frequency]
-                          }{" "}
-                          · Desde {r.startDate.split("-").reverse().join("/")} ·{" "}
-                          {
-                            ledger.accounts.find((a) => a.id === r.accountId)
-                              ?.name
-                          }
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 sm:gap-5">
-                      <span className="tabular-nums">{money(r.amount)}</span>
-                      <Badge variant={r.active ? "secondary" : "outline"}>
-                        {r.active ? "Ativa" : "Pausada"}
-                      </Badge>
-                      <Button
-                        disabled={busy}
-                        variant="outline"
-                        onClick={() =>
-                          void run(async () =>
-                            setLedger(
-                              await window.lume.saveRecurrence({
-                                ...r,
-                                active: !r.active,
-                              }),
-                            ),
-                          )
-                        }
-                      >
-                        {r.active ? "Pausar" : "Retomar"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-            <p className="text-xs text-muted-foreground">
-              Ao retomar uma recorrência, os vencimentos desde o início são
-              registrados, incluindo o período pausado. Lançamentos já
-              registrados são preservados.
-            </p>
-          </div>
+          <Recurrences
+            ledger={ledger}
+            busy={busy}
+            selectedId={selectedRecurrence}
+            onCreate={() => add(true)}
+            onToggle={(r) =>
+              void run(async () =>
+                setLedger(
+                  await window.lume.saveRecurrence({ ...r, active: !r.active }),
+                ),
+              )
+            }
+            onTransactions={(id) => {
+              setRecurrenceFilter(id);
+              setPage("transactions");
+            }}
+          />
         )}
         <footer className="text-xs text-muted-foreground mt-8 pt-5 border-t border-border flex justify-between">
           <span>Lume · Finanças pessoais</span>

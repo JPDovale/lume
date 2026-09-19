@@ -4,7 +4,11 @@ import {
   recurrenceSchema,
   type Ledger,
 } from "../domain/model";
-import { materialize } from "../domain/recurrence";
+import {
+  materialize,
+  linkOccurrence,
+  installmentTotal,
+} from "../domain/recurrence";
 import type { Clock, LedgerRepository } from "./ports";
 export class LedgerService {
   private repository: LedgerRepository;
@@ -15,12 +19,18 @@ export class LedgerService {
   }
   snapshot(): Ledger {
     const state = this.repository.read();
+    const linked = state.transactions.map((t) =>
+      linkOccurrence(t, state.recurrences),
+    );
+    const migrated =
+      JSON.stringify(linked) !== JSON.stringify(state.transactions);
+    state.transactions = linked;
     const due = materialize(
       state.recurrences,
       state.transactions,
       this.clock.today(),
     );
-    if (due.length) {
+    if (due.length || migrated) {
       state.transactions.push(...due);
       this.repository.save(state);
     }
@@ -31,6 +41,29 @@ export class LedgerService {
       state = this.repository.read();
     this.references(state, tx);
     const i = state.transactions.findIndex((t) => t.id === tx.id);
+    const previous =
+      i >= 0
+        ? linkOccurrence(state.transactions[i], state.recurrences)
+        : undefined;
+    if (previous?.recurrenceId) {
+      if (tx.recurrenceId && tx.recurrenceId !== previous.recurrenceId)
+        throw new Error("Não é possível trocar a recorrência de origem.");
+      Object.assign(tx, {
+        recurrenceId: previous.recurrenceId,
+        recurrenceDate: previous.recurrenceDate,
+        installmentNumber: previous.installmentNumber,
+        installmentTotal: previous.installmentTotal,
+        validationStatus: tx.validationStatus ?? previous.validationStatus,
+      });
+      if (tx.transfer || tx.openingBalance)
+        throw new Error(
+          "Uma parcela não pode ser transferência ou saldo inicial.",
+        );
+    } else if (tx.recurrenceId || tx.validationStatus === "pending") {
+      throw new Error(
+        "Lançamentos recorrentes devem ser gerados pela recorrência.",
+      );
+    }
     if (i >= 0) state.transactions[i] = tx;
     else state.transactions.push(tx);
     this.repository.save(state);
@@ -49,6 +82,17 @@ export class LedgerService {
       throw new Error(
         "Crie outra recorrência para alterar início ou frequência.",
       );
+    const total = installmentTotal(rule);
+    if (
+      existing &&
+      total !== null &&
+      state.transactions.some(
+        (t) =>
+          t.recurrenceId === rule.id &&
+          (linkOccurrence(t, [existing]).installmentNumber ?? 0) > total,
+      )
+    )
+      throw new Error("O fim não pode excluir parcelas já lançadas.");
     state.recurrences = state.recurrences
       .filter((r) => r.id !== rule.id)
       .concat(rule);
@@ -56,7 +100,7 @@ export class LedgerService {
       ...materialize(state.recurrences, state.transactions, this.clock.today()),
     );
     this.repository.save(state);
-    return state;
+    return this.snapshot();
   }
   saveNamed(kind: "accounts" | "categories" | "tags", input: unknown) {
     if (!["accounts", "categories", "tags"].includes(kind))

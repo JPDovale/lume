@@ -15,22 +15,35 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
+import { installmentLabel } from "@/domain/recurrence";
 import { money, type Ledger, type Transaction } from "@/domain/model";
 export function Transactions({
   ledger,
   onEdit,
+  recurrenceFilter,
+  onRecurrenceFilter,
+  onOpenRecurrence,
 }: {
   ledger: Ledger;
+  recurrenceFilter: string | null;
+  onRecurrenceFilter: (id: string | null) => void;
+  onOpenRecurrence: (id: string) => void;
   onEdit: (t: Transaction) => void;
 }) {
   const [search, setSearch] = useState(""),
     [category, setCategory] = useState("all"),
     [tag, setTag] = useState("all"),
     [month, setMonth] = useState(""),
+    [status, setStatus] = useState("all"),
     [page, setPage] = useState(0);
   const rows = ledger.transactions
     .filter(
       (t) =>
+        (!recurrenceFilter || t.recurrenceId === recurrenceFilter) &&
+        (status === "all" ||
+          (status === "pending"
+            ? t.validationStatus === "pending"
+            : t.validationStatus !== "pending")) &&
         (!month || t.date.startsWith(month)) &&
         (category === "all" || (t.categoryId ?? "") === category) &&
         (tag === "all" || t.tagIds.includes(tag)) &&
@@ -41,6 +54,14 @@ export function Transactions({
     .sort((a, b) => b.date.localeCompare(a.date));
   return (
     <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">
+        {
+          ledger.transactions.filter((t) => t.validationStatus === "pending")
+            .length
+        }{" "}
+        pendentes de validação. Valores pendentes entram nas previsões, mas não
+        no realizado.
+      </p>
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-48">
           <Search
@@ -68,6 +89,39 @@ export function Transactions({
             setPage(0);
           }}
         />
+        <NativeSelect
+          aria-label="Filtrar situação"
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(0);
+          }}
+        >
+          <NativeSelectOption value="all">
+            Todas as situações
+          </NativeSelectOption>
+          <NativeSelectOption value="pending">
+            Pendentes de validação
+          </NativeSelectOption>
+          <NativeSelectOption value="confirmed">Confirmados</NativeSelectOption>
+        </NativeSelect>
+        <NativeSelect
+          aria-label="Filtrar recorrência"
+          value={recurrenceFilter ?? ""}
+          onChange={(e) => {
+            onRecurrenceFilter(e.target.value || null);
+            setPage(0);
+          }}
+        >
+          <NativeSelectOption value="">
+            Todas as recorrências e avulsos
+          </NativeSelectOption>
+          {ledger.recurrences.map((r) => (
+            <NativeSelectOption key={r.id} value={r.id}>
+              {r.description}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
         <NativeSelect
           aria-label="Filtrar categoria"
           value={category}
@@ -127,8 +181,29 @@ export function Transactions({
                         ? "Transferência"
                         : t.openingBalance
                           ? "Saldo inicial"
-                          : "Recorrente"}
+                          : installmentLabel(t)}
                     </p>
+                  )}
+                  {t.recurrenceId && (
+                    <Button
+                      size="sm"
+                      variant="link"
+                      className="p-0 h-auto text-xs"
+                      onClick={() => onOpenRecurrence(t.recurrenceId!)}
+                    >
+                      {ledger.recurrences.find((r) => r.id === t.recurrenceId)
+                        ?.description ?? "Ver recorrência"}
+                    </Button>
+                  )}
+                  {t.validationStatus === "pending" && (
+                    <div className="mt-1">
+                      <Badge
+                        variant="outline"
+                        className="text-amber-300 border-amber-500/30"
+                      >
+                        Pendente de validação
+                      </Badge>
+                    </div>
                   )}
                 </TableCell>
                 <TableCell>
@@ -157,9 +232,20 @@ export function Transactions({
                 <TableCell
                   className={`text-right tabular-nums ${t.amount > 0 ? "text-primary" : ""}`}
                 >
+                  {t.validationStatus === "pending" ? "≈ " : ""}
                   {money(t.amount)}
                 </TableCell>
                 <TableCell>
+                  {t.validationStatus === "pending" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onEdit(t)}
+                      aria-label={`Validar ${t.description}`}
+                    >
+                      Validar
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     variant="ghost"
@@ -182,7 +268,12 @@ export function Transactions({
       <div className="flex justify-between text-sm text-muted-foreground">
         <span>
           {rows.length} lançamentos ·{" "}
-          {money(rows.reduce((s, t) => s + t.amount, 0))}
+          {money(
+            rows
+              .filter((t) => t.validationStatus !== "pending")
+              .reduce((s, t) => s + t.amount, 0),
+          )}{" "}
+          confirmados
         </span>
         <div className="flex gap-2">
           <Button
